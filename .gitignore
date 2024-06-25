@@ -1,0 +1,35 @@
+# Node.js
+/core/node_modules
+/frontend/node_modules
+
+# Environment variables
+/core/.env
+/frontend/.env
+
+# Build output
+/frontend/build
+/frontend/dist
+
+# Logs
+/core/logs
+/frontend/logs
+
+# System files
+.DS_Store
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Debug output
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
