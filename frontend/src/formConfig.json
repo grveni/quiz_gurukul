@@ -1,0 +1,24 @@
+{
+  "fields": [
+    {
+      "name": "username",
+      "type": "text",
+      "placeholder": "Username"
+    },
+    {
+      "name": "email",
+      "type": "email",
+      "placeholder": "Email"
+    },
+    {
+      "name": "phone",
+      "type": "text",
+      "placeholder": "Mobile"
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "placeholder": "Password"
+    }
+  ]
+}

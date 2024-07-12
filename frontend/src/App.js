@@ -1,28 +1,24 @@
 // src/App.js
 
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+
+import formConfig from './formConfig.json';
+import RegisterForm from './components/RegisterForm';
+import LoginForm from './components/LoginForm';
+
+import './styles.css'; // Import the CSS file
 
 const App = () => {
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Fetch the message from the backend
-    axios
-      .get('http://localhost:5001')
-      .then((response) => {
-        setMessage(response.data);
-      })
-      .catch((error) => {
-        console.error('Error fetching message:', error);
-      });
-  }, []);
+  const [formType, setFormType] = useState(null);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <p>{message || 'Hello World from the frontend!'}</p>
-      </header>
+    <div className="container">
+      <h1>Welcome</h1>
+      <button onClick={() => setFormType('register')}>Register</button>
+      <button onClick={() => setFormType('login')}>Login</button>
+
+      {formType === 'register' && <RegisterForm />}
+      {formType === 'login' && <LoginForm />}
     </div>
   );
 };
