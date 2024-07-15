@@ -20,7 +20,8 @@ const RegisterForm = () => {
   );
   const [roles, setRoles] = useState([]);
   const [selectedRole, setSelectedRole] = useState('');
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [globalErrors, setGlobalErrors] = useState([]);
   const [success, setSuccess] = useState('');
   const [userDetails, setUserDetails] = useState(null);
 
@@ -44,7 +45,7 @@ const RegisterForm = () => {
         setRoles(result.roles);
       } catch (err) {
         console.error('Failed to load roles:', err); // Debugging statement
-        setError('Failed to load roles');
+        setGlobalErrors([{ msg: 'Failed to load roles' }]);
       }
     }
     fetchRoles();
@@ -63,11 +64,12 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
+    setGlobalErrors([]);
     setSuccess('');
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/register', {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,10 +82,19 @@ const RegisterForm = () => {
         setSuccess('User registered successfully');
         setUserDetails(result.user);
       } else {
-        setError(result.message || 'An error occurred');
+        if (result.errors) {
+          const fieldErrorMap = {};
+          result.errors.forEach((error) => {
+            fieldErrorMap[error.path] = error.msg;
+          });
+          setFieldErrors(fieldErrorMap);
+        } else {
+          setGlobalErrors([{ msg: result.message || 'An error occurred' }]);
+        }
       }
     } catch (err) {
-      setError('An error occurred');
+      console.error('Error during registration:', err);
+      setGlobalErrors([{ msg: 'An error occurred' }]);
     }
   };
 
@@ -92,26 +103,41 @@ const RegisterForm = () => {
       <h1>Register</h1>
       <form className="form-container" onSubmit={handleSubmit}>
         {formFields.map((field) => (
-          <input
-            key={field.name}
-            type={field.type}
-            name={field.name}
-            placeholder={field.placeholder}
-            value={formData[field.name]}
-            onChange={handleChange}
-          />
+          <div key={field.name} className="form-field">
+            <input
+              type={field.type}
+              name={field.name}
+              placeholder={field.placeholder}
+              value={formData[field.name]}
+              onChange={handleChange}
+            />
+            {fieldErrors[field.name] && (
+              <p style={{ color: 'red' }}>{fieldErrors[field.name]}</p>
+            )}
+          </div>
         ))}
-        <select value={selectedRole} onChange={handleRoleChange}>
-          <option value="">Select Role</option>
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.role_name}
-            </option>
-          ))}
-        </select>
+        <div className="form-field">
+          <select value={selectedRole} onChange={handleRoleChange}>
+            <option value="">Select Role</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.role_name}
+              </option>
+            ))}
+          </select>
+          {fieldErrors['role_id'] && (
+            <p style={{ color: 'red' }}>{fieldErrors['role_id']}</p>
+          )}
+        </div>
         <button type="submit">Register</button>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {globalErrors.length > 0 && (
+        <div style={{ color: 'red' }}>
+          {globalErrors.map((error, index) => (
+            <p key={index}>{error.msg}</p>
+          ))}
+        </div>
+      )}
       {success && (
         <div>
           <p style={{ color: 'green' }}>{success}</p>
