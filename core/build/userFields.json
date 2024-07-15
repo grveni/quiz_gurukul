@@ -1,0 +1,11 @@
+{
+  "users": [
+    { "name": "username", "type": "VARCHAR(255)", "constraints": "NOT NULL" },
+    {
+      "name": "email",
+      "type": "VARCHAR(255)",
+      "constraints": "NOT NULL UNIQUE"
+    },
+    { "name": "password", "type": "VARCHAR(255)", "constraints": "NOT NULL" }
+  ]
+}

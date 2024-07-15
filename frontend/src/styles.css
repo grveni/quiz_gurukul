@@ -22,10 +22,9 @@ body {
 
 .nested-container {
   background-color: #fff;
-  padding: 20px;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  width: 90%;
+  width: 100%;
   text-align: center;
 }
 
@@ -34,7 +33,7 @@ h1 {
 }
 
 input {
-  width: 100%;
+  width: 90%;
   padding: 10px;
   margin: 10px 0;
   border: 1px solid #ccc;
