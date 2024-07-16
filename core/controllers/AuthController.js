@@ -25,6 +25,12 @@ class AuthController extends Controller {
         .trim()
         .escape()
         .run(req);
+      await body('role_id')
+        .notEmpty()
+        .withMessage("Please select user's role")
+        .trim()
+        .escape()
+        .run(req);
 
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -75,7 +81,8 @@ class AuthController extends Controller {
 
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        console.log(errors.array()[0].msg);
+        return res.status(400).json({ message: errors.array()[0].msg });
       }
 
       const { email, password } = req.body;
@@ -83,21 +90,31 @@ class AuthController extends Controller {
       // Check if user exists
       const user = await User.findByEmail(email);
       if (!user) {
+        console.log('user not found');
         return res.status(404).json({ message: 'User not found' });
       }
 
       // Verify password
       const isMatch = await User.comparePassword(password, user.password);
       if (!isMatch) {
+        console.log('invalid password');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      // Fetch user role from the database
+      const roleName = await User.findUserRoleName(user.id);
+      if (!roleName) {
+        return res.status(500).json({ message: 'Role not found' });
+      }
+
+      console.log(user.id, roleName);
       // Generate JWT
       const token = jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.id, role: roleName.toLowerCase() },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
+      console.log(token);
       res.json({ token });
     } catch (error) {
       console.error('Error logging in user:', error);

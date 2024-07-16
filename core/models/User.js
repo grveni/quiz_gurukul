@@ -36,6 +36,10 @@ class User extends Model {
   async comparePassword(candidatePassword, storedPassword) {
     return this.queryClass.comparePassword(candidatePassword, storedPassword);
   }
+
+  async findUserRoleName(userId) {
+    return this.queryClass.findUserRoleName(userId);
+  }
 }
 
 module.exports = new User();

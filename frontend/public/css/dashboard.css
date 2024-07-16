@@ -1,0 +1,116 @@
+/* Global styles */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  background-color: #3f51b5;
+  color: white;
+  padding: 10px;
+  text-align: center;
+}
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+}
+
+.sidebar {
+  background-color: #f4f4f4;
+  padding: 10px;
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.footer {
+  background-color: #f4f4f4;
+  color: #333;
+  padding: 10px;
+  text-align: center;
+}
+
+.sidebar a {
+  display: block;
+  color: #333;
+  padding: 10px 0;
+  text-decoration: none;
+}
+
+.sidebar a:hover {
+  background-color: #ddd;
+}
+
+/* Styles specific to login and registration forms */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f9;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.home-container,
+.nested-home-container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 300px;
+  text-align: center;
+  margin: auto; /* Center the form in the container */
+}
+
+h1 {
+  color: #333;
+}
+
+input {
+  width: 90%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  width: 80%;
+  padding: 10px;
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 2px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.form-container {
+  margin-top: 20px;
+}
+
+.form-container input {
+  margin-bottom: 10px;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import schemaConfig from '../schemaConfig.json';
+import schemaConfig from '../../schemaConfig.json';
 
 const RegisterForm = () => {
   const API_URL = 'http://localhost:5001';
@@ -99,7 +99,7 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="nested-container">
+    <div className="nested-home-container">
       <h1>Register</h1>
       <form className="form-container" onSubmit={handleSubmit}>
         {formFields.map((field) => (

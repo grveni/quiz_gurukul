@@ -35,6 +35,16 @@ class UserQueries extends Query {
   async comparePassword(candidatePassword, storedPassword) {
     return bcrypt.compare(candidatePassword, storedPassword);
   }
+
+  async findUserRoleName(userId) {
+    const result = await db.query(
+      'SELECT roles.role_name FROM roles ' +
+        'JOIN user_roles ON roles.id = user_roles.role_id ' +
+        'WHERE user_roles.user_id = $1',
+      [userId]
+    );
+    return result.rows[0]?.role_name;
+  }
 }
 
 module.exports = new UserQueries();

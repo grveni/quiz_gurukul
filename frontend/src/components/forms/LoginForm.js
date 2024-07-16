@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../../utils/Auth'; // Assume you have a login function in auth.js
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -7,33 +8,28 @@ const LoginForm = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-
   const handleLogin = async () => {
     setError('');
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies in requests
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        navigate('/dashboard'); // Navigate to dashboard
+      const userRole = await login(email, password); // Assume login returns the user role
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else if (userRole === 'student') {
+        navigate('/student');
       } else {
-        setError(result.message || 'An error occurred');
+        setError('LoginForm : Invalid role');
       }
     } catch (err) {
-      setError('An error occurred');
+      if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Login failed');
+      }
     }
   };
 
   return (
-    <div className="nested-container">
+    <div className="nested-home-container">
       <h1>Login</h1>
       <div className="form-container">
         <input
