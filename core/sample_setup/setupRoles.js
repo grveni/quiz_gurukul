@@ -4,6 +4,7 @@ async function demoRoleFunctions() {
   // Delete all roles
   const deletedRole = await Role.deleteAll();
   console.log('Deleted all Role');
+  //Reset index
   // Add new role
   newRole = await Role.create('Admin');
   console.log('New Role:', newRole);
