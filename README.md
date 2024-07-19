@@ -90,6 +90,10 @@ The Quiz Management System is a web application designed to facilitate the creat
 4. **Access the Application:**
    - Open your browser and navigate to `http://localhost:3000` for the frontend.
    - The backend will be running on `http://localhost:5000` (or the port you specified).
+  
+5. **Documentation**
+
+   - [API Documentation](./API.md)
 
 ## Contribution Guidelines
 
@@ -101,14 +105,9 @@ The Quiz Management System is a web application designed to facilitate the creat
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the MIT License. 
 
-## Acknowledgements
+For any questions or issues, please contact [veni.prof@gmail.com].
 
-- Special thanks to all contributors and developers who have helped in building and improving this project.
 
-For any questions or issues, please contact [your-email@example.com].
 
----
-
-This README file provides a comprehensive overview of the project, including implemented features, future plans, project structure, setup instructions, and contribution guidelines.
