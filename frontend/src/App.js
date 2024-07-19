@@ -58,8 +58,8 @@ const App = () => {
         <Route path="/" element={<Home setFormType={setFormType} />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/login" element={<LoginForm />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/student" element={<StudentDashboardPage />} />
+        <Route path="/admin/*" element={<AdminDashboardPage />} />
+        <Route path="/student/*" element={<StudentDashboardPage />} />
       </Routes>
     </div>
   );

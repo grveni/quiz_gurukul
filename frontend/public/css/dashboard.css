@@ -114,3 +114,130 @@ button:hover {
 .form-container input {
   margin-bottom: 10px;
 }
+
+/* Styles for dashboard components */
+.add-quiz,
+.add-question,
+.quiz-list,
+.student-list,
+.student-report,
+.consolidated-report,
+.manage-users,
+.take-quiz,
+.quizzes,
+.view-profile,
+.results {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-list {
+  margin-bottom: 20px;
+}
+form div {
+  margin-bottom: 10px;
+}
+
+form div label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+form div input,
+form div textarea,
+form div select {
+  width: 100%;
+  padding: 8px;
+}
+
+form button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+form button:hover {
+  background-color: #0056b3;
+}
+
+.quiz-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.quiz-list ul li {
+  padding: 10px 0;
+}
+
+.quiz-list ul li a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.quiz-list ul li a:hover {
+  text-decoration: underline;
+}
+
+/* Styles for QuizDetails and question blocks */
+.quiz-details {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.question-block {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.option-block {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.option-block input[type='text'] {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.option-block label {
+  margin-right: 10px;
+}
+
+.option-block svg {
+  cursor: pointer;
+}
+
+.option-block svg:hover {
+  color: red;
+}
+
+.correct {
+  background-color: #e0f7e9;
+}
+
+.incorrect {
+  background-color: #fbe9e9;
+}
+
+.correct-answer {
+  color: green;
+  font-weight: bold;
+}
