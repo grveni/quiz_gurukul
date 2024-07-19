@@ -103,9 +103,6 @@ The Quiz Management System is a web application designed to facilitate the creat
 4. Push to the branch (`git push origin feature/your-feature`).
 5. Create a new Pull Request.
 
-## License
-
-This project is licensed under the MIT License. 
 
 For any questions or issues, please contact [veni.prof@gmail.com].
 
