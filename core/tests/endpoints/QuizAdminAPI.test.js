@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../server'); // Adjust the path to your server file
-const db = require('../../db/db'); // Adjust the path to your db file
+const app = require('../../server');
+const db = require('../../db/db');
 
 class QuizApiTest {
   constructor() {
