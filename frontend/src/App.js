@@ -4,7 +4,7 @@ import RegisterForm from './components/forms/RegisterForm';
 import LoginForm from './components/forms/LoginForm';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
-import { getUserRole } from './utils/Auth'; // Assuming there's a function to get user role
+import { getUserRole } from './utils/Auth';
 
 const Home = ({ setFormType }) => {
   const navigate = useNavigate();
@@ -34,7 +34,6 @@ const App = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch user role and set it
     const fetchUserRole = async () => {
       const userRole = await getUserRole();
       setRole(userRole);
@@ -44,7 +43,6 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    // Redirect based on role
     if (role === 'admin') {
       navigate('/admin');
     } else if (role === 'student') {
