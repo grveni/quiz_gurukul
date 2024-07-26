@@ -33,3 +33,15 @@ coverage
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+.vscode/
+core/build/grantPermissions.js
+core/cert.pem
+core/csr.pem
+core/key.pem
+core/tests/endpoints/QuizStudentAPI.test.js
+core/tests/utils/
+core/tmp_tests/
+frontend/public/css/newDashboard.css
+frontend/public/test.js
+logger.js
