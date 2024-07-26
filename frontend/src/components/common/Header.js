@@ -12,7 +12,7 @@ const Header = () => {
   };
 
   return (
-    <AppBar position="static" className="header">
+    <AppBar position="fixed" className="header">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Quiz System

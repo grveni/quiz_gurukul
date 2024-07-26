@@ -70,7 +70,7 @@ export const listAllQuestions = async (quizId) => {
         'Content-Type': 'application/json',
       },
     });
-    return response.data.questions;
+    return response.data;
   } catch (error) {
     console.error('Error fetching questions:', error);
     throw new Error(
@@ -289,10 +289,74 @@ export const submitQuizAnswers = async (quizId, answers) => {
   return response.data;
 };
 
+/**
+ * update the status of Quiz
+ * @param {Number} quizId - Quiz's id
+ * @returns {Object} - response status with message
+ */
 export const getQuizResults = async (quizId) => {
   const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/${quizId}/results`, {
+  const response = await axios.get(`${API_URL}/student/${quizId}/results`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
+};
+
+export const updateQuizStatus = async (quizId, isActive) => {
+  const token = localStorage.getItem('token');
+  const response = await axios.patch(
+    `${API_URL}/${quizId}/status`,
+    { is_active: isActive },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Get active quizzes taken by a user in the past
+ * @returns {Array} - The list of quizzes
+ * @throws {Error} - Throws an error if the request fails
+ */
+export const getUserActiveQuizzes = async () => {
+  try {
+    const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
+    const response = await axios.get(`${API_URL}/student/active-quizzes`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching active quizzes:', error);
+    throw new Error(
+      error.response
+        ? error.response.data.message
+        : 'Failed to fetch active quizzes'
+    );
+  }
+};
+
+/**
+ * Get the details of a specific quiz by ID for retaking
+ * @param {number} quizId - The ID of the quiz
+ * @returns {Object} - The quiz details
+ * @throws {Error} - Throws an error if the request fails
+ */
+export const getQuizById = async (quizId) => {
+  try {
+    const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
+    console.log('send request by id');
+    const response = await axios.get(`${API_URL}/student/${quizId}/take`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching quiz details:', error);
+  }
 };

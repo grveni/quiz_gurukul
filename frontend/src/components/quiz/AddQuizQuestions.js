@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getQuizzes, addQuestions } from '../../utils/QuizAPI';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../utils/Auth';
 
@@ -131,16 +130,6 @@ const AddQuestions = () => {
 
   return (
     <div className="add-questions">
-      <AppBar position="static" className="header">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Quiz System
-          </Typography>
-          <Button color="inherit" onClick={handleLogout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
       <h2>Add Questions</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {message && <p style={{ color: 'green' }}>{message}</p>}

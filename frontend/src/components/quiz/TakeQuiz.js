@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getNextUntakenQuiz, submitQuizAnswers } from '../../utils/QuizAPI';
+import { useParams } from 'react-router-dom';
+import {
+  getQuizById,
+  getNextUntakenQuiz,
+  submitQuizAnswers,
+} from '../../utils/QuizAPI';
 import { useNavigate } from 'react-router-dom';
 
 const TakeQuiz = () => {
+  const { quizId } = useParams(); // Ensure useParams is imported and used correctly
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [message, setMessage] = useState('');
@@ -12,24 +18,30 @@ const TakeQuiz = () => {
   useEffect(() => {
     async function fetchQuiz() {
       try {
-        const quizData = await getNextUntakenQuiz();
+        let quizData;
+        if (quizId) {
+          console.log(`Fetching quiz with ID: ${quizId}`);
+          quizData = await getQuizById(quizId);
+        } else {
+          console.log('Fetching next untaken quiz');
+          quizData = await getNextUntakenQuiz();
+        }
         console.log('Quiz Data:', quizData); // Log the quizData
-        setQuiz(quizData.quiz);
 
-        // Ensure options are loaded into questions
-        const questionsWithOptions = quizData.quiz.questions.map(
-          (question) => ({
-            ...question,
-            options: question.options || [], // Ensure options is always an array
-          })
-        );
+        if (quizData && quizData.quiz && quizData.quiz.questions) {
+          // Ensure options are loaded into questions
+          const questionsWithOptions = quizData.quiz.questions.map(
+            (question) => ({
+              ...question,
+              options: question.options || [], // Ensure options is always an array
+            })
+          );
 
-        setQuiz((prevQuiz) => ({
-          ...prevQuiz,
-          questions: questionsWithOptions,
-        }));
+          setQuiz((prevQuiz) => ({
+            ...quizData.quiz,
+            questions: questionsWithOptions,
+          }));
 
-        if (questionsWithOptions && Array.isArray(questionsWithOptions)) {
           setAnswers(
             questionsWithOptions.map((question) => ({
               questionId: question.id,
@@ -37,6 +49,8 @@ const TakeQuiz = () => {
               answerText: '',
             }))
           );
+        } else {
+          throw new Error('Invalid quiz data structure');
         }
       } catch (err) {
         console.error(err);
@@ -44,7 +58,7 @@ const TakeQuiz = () => {
       }
     }
     fetchQuiz();
-  }, []);
+  }, [quizId]); // Add quizId to the dependency array
 
   const handleOptionChange = (questionId, optionId, optionText) => {
     const updatedAnswers = answers.map((answer) =>
@@ -72,7 +86,6 @@ const TakeQuiz = () => {
       console.log('Quiz submitted', quiz.id, answers);
       const result = await submitQuizAnswers(quiz.id, answers);
       console.log('Quiz Result:', result); // Log the result
-      //const path = '/dummy';
       const path = `/student/results/${quiz.id}`;
       console.log('Navigating to:', path);
       navigate(path);

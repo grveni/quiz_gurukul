@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getQuizResults } from '../../utils/QuizAPI';
 import { useNavigate } from 'react-router-dom';
+import './css/QuizResults.css';
 
 const QuizResults = () => {
   const { quizId } = useParams();
@@ -44,23 +45,44 @@ const QuizResults = () => {
           }`}
         >
           <h3>{`Q${index + 1}: ${question.question_text}`}</h3>
-          <p>Your answer: {question.user_response}</p>
-          {showCorrectAnswers && (
-            <div className="correct-answer">
-              Correct answer:
-              {question.options
-                .filter((option) => option.is_correct)
-                .map((option) => (
-                  <p key={option.id}>{option.option_text}</p>
-                ))}
-            </div>
-          )}
+          <ul className="options">
+            {question.options.map((option) => (
+              <li
+                key={option.id}
+                className={`option ${
+                  option.option_text === question.user_response
+                    ? 'user-response'
+                    : ''
+                } ${
+                  showCorrectAnswers && option.is_correct
+                    ? 'correct-answer'
+                    : ''
+                }`}
+              >
+                {option.option_text}
+                {option.option_text === question.user_response && (
+                  <span
+                    className={`response-icon ${
+                      question.response_correct ? 'correct' : 'incorrect'
+                    }`}
+                  >
+                    {question.response_correct ? '✔️' : '❌'}
+                  </span>
+                )}
+                {showCorrectAnswers && option.is_correct && (
+                  <span className="correct-icon">✔️</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       ))}
       <button onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}>
         {showCorrectAnswers ? 'Hide Correct Answers' : 'Show Correct Answers'}
       </button>
-      <button onClick={() => navigate('/take-quiz')}>Retake Quiz</button>
+      <button onClick={() => navigate(`/student/take-quiz/${quizId}`)}>
+        Retake Quiz
+      </button>
     </div>
   );
 };

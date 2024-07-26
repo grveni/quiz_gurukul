@@ -132,6 +132,7 @@ class QuizQueries extends Query {
    */
   async findQuestionsByQuizId(quizId) {
     try {
+      console.log(quizId);
       const questionsResult = await db.query(
         `
           SELECT 
@@ -141,7 +142,8 @@ class QuizQueries extends Query {
             q.created_at, 
             q.updated_at, 
             o.id as option_id, 
-            o.option_text
+            o.option_text,
+            o.is_correct
           FROM 
             questions q 
           INNER JOIN 
@@ -178,13 +180,14 @@ class QuizQueries extends Query {
           questionsMap.get(questionId).options.push({
             id: row.option_id,
             option_text: row.option_text,
+            is_correct: row.is_correct,
           });
         }
       });
 
       const questions = Array.from(questionsMap.values());
 
-      console.log('Final Questions:', questions);
+      //console.log('Final Questions...:', questions);
 
       return questions;
     } catch (error) {
@@ -434,12 +437,7 @@ class QuizQueries extends Query {
           q.id, o.id
       `;
 
-      // Log the values before executing the query
-      console.log(`Executing query with userId: ${userId}, quizId: ${quizId}`);
-
       const results = await db.query(query, [userId, quizId]);
-
-      console.log('Raw Results:', results.rows);
 
       if (results.rowCount === 0) {
         console.error(
@@ -634,6 +632,42 @@ class QuizQueries extends Query {
     );
 
     return result.rows[0];
+  }
+
+  /**
+   * Update the status of a quiz by ID
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Boolean} isActive - The new status of the quiz
+   * @returns {Object} - The updated quiz
+   */
+  async updateQuizStatusById(quizId, isActive) {
+    const result = await db.query(
+      `UPDATE quizzes SET is_active = $1 WHERE id = $2 RETURNING *`,
+      [isActive, quizId]
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Get active quizzes taken by a user in the past
+   * @param {Number} userId - The ID of the user
+   * @returns {Array} - List of active quizzes
+   */
+  async getUserActiveQuizzes(userId) {
+    const result = await db.query(
+      `SELECT q.* 
+       FROM quizzes q
+       JOIN (
+         SELECT quiz_id
+         FROM quiz_attempts
+         WHERE user_id = $1
+         GROUP BY quiz_id
+       ) qa ON q.id = qa.quiz_id
+       WHERE q.is_active = true`,
+      [userId]
+    );
+    console.log(result.rows);
+    return result.rows;
   }
 }
 

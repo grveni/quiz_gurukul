@@ -170,6 +170,14 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.listAllQuestions(req, res)
     );
 
+    this.router.patch(
+      '/:quizId/status',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+      (req, res, next) =>
+        AuthMiddleware.authorizeRoles('admin')(req, res, next),
+      (req, res) => this.controller.updateQuizStatus(req, res)
+    );
+
     // Routes accessible to both admin and student
 
     // Route to get a particular quiz by ID
@@ -188,7 +196,7 @@ class QuizRoutes extends Route {
 
     // Route to get quiz details for taking the quiz
     this.router.get(
-      '/:quizId/take',
+      '/student/:quizId/take',
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
       (req, res) => this.controller.getQuizForTaking(req, res)
     );
@@ -200,13 +208,6 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.submitQuizAnswers(req, res)
     );
 
-    // Route to get results for a specific quiz taken by the student of the last attempt
-    this.router.get(
-      '/:quizId/results',
-      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
-      (req, res) => this.controller.getQuizResults(req, res)
-    );
-
     // Student-specific routes
 
     // Route to get the next untaken active quiz for a student
@@ -216,18 +217,17 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.getNextUntakenQuiz(req, res)
     );
 
-    // Route to list all quizzes taken by the student along with their scores
-    this.router.get(
-      '/students/quizzes',
-      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
-      (req, res) => this.controller.listStudentQuizzes(req, res)
-    );
-
     // Route to get results of all quizzes taken by the student
     this.router.get(
-      '/students/quizzes/:quizId/results',
+      '/student/:quizId/results',
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
-      (req, res) => this.controller.getStudentQuizResults(req, res)
+      (req, res) => this.controller.getQuizResults(req, res)
+    );
+
+    this.router.get(
+      '/student/active-quizzes',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+      (req, res) => this.controller.getStudentQuizzes(req, res)
     );
   }
 }

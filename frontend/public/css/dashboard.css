@@ -1,4 +1,3 @@
-/* Global styles */
 body,
 html {
   margin: 0;
@@ -10,7 +9,7 @@ html {
 .container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .header {
@@ -18,26 +17,10 @@ html {
   color: white;
   padding: 10px;
   text-align: center;
-}
-
-.dashboard-container {
-  display: flex;
-  flex: 1;
-}
-
-.sidebar {
-  background-color: #f4f4f4;
-  padding: 10px;
-  width: 200px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-content {
-  flex: 1;
-  padding: 20px;
-  background-color: #f9f9f9;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
 .footer {
@@ -45,6 +28,36 @@ html {
   color: #333;
   padding: 10px;
   text-align: center;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+  margin-top: 64px; /* Height of the header */
+  margin-bottom: 50px; /* Height of the footer */
+}
+
+.sidebar {
+  background-color: #f4f4f4;
+  padding: 10px;
+  width: 200px;
+  flex-shrink: 0;
+  height: calc(100vh - 114px); /* Full height minus header and footer */
+  position: fixed;
+  top: 64px; /* Below the header */
+  bottom: 50px; /* Above the footer */
+  overflow-y: auto;
+}
+
+.dashboard-content {
+  padding: 20px;
+  background-color: #f9f9f9;
+  height: calc(100vh - 114px); /* Full height minus header and footer */
+  overflow-y: auto; /* Make content scrollable */
 }
 
 .sidebar a {
@@ -56,188 +69,4 @@ html {
 
 .sidebar a:hover {
   background-color: #ddd;
-}
-
-/* Styles specific to login and registration forms */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f9;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-
-.home-container,
-.nested-home-container {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  width: 300px;
-  text-align: center;
-  margin: auto; /* Center the form in the container */
-}
-
-h1 {
-  color: #333;
-}
-
-input {
-  width: 90%;
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  width: 80%;
-  padding: 10px;
-  background-color: #007bff;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  margin: 2px;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-.form-container {
-  margin-top: 20px;
-}
-
-.form-container input {
-  margin-bottom: 10px;
-}
-
-/* Styles for dashboard components */
-.add-quiz,
-.add-question,
-.quiz-list,
-.student-list,
-.student-report,
-.consolidated-report,
-.manage-users,
-.take-quiz,
-.quizzes,
-.view-profile,
-.results {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.quiz-list {
-  margin-bottom: 20px;
-}
-form div {
-  margin-bottom: 10px;
-}
-
-form div label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-form div input,
-form div textarea,
-form div select {
-  width: 100%;
-  padding: 8px;
-}
-
-form button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-form button:hover {
-  background-color: #0056b3;
-}
-
-.quiz-list ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.quiz-list ul li {
-  padding: 10px 0;
-}
-
-.quiz-list ul li a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.quiz-list ul li a:hover {
-  text-decoration: underline;
-}
-
-/* Styles for QuizDetails and question blocks */
-.quiz-details {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-.question-block {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  margin-bottom: 10px;
-}
-
-.question-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.option-block {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.option-block input[type='text'] {
-  flex: 1;
-  margin-right: 10px;
-}
-
-.option-block label {
-  margin-right: 10px;
-}
-
-.option-block svg {
-  cursor: pointer;
-}
-
-.option-block svg:hover {
-  color: red;
-}
-
-.correct {
-  background-color: #e0f7e9;
-}
-
-.incorrect {
-  background-color: #fbe9e9;
-}
-
-.correct-answer {
-  color: green;
-  font-weight: bold;
 }

@@ -90,7 +90,13 @@ class Quiz extends Model {
    * @returns {Array} - The list of questions
    */
   async listAllQuestions(quizId) {
-    return this.queryClass.findQuestionsByQuizId(quizId);
+    try {
+      const questions = await this.queryClass.findQuestionsByQuizId(quizId);
+      return questions;
+    } catch (error) {
+      console.error('Error in listAllQuestions:', error);
+      throw error;
+    }
   }
 
   /**
@@ -140,10 +146,6 @@ class Quiz extends Model {
     return this.queryClass.findAllWithPagination(page, limit);
   }
 
-  async getAllQuestions(quizId) {
-    return this.queryClass.getAllQuestions(quizId);
-  }
-
   /**
    * Get an active quiz for a student to take
    * @param {Number} userId - The ID of the user
@@ -151,15 +153,6 @@ class Quiz extends Model {
    */
   async getActiveQuiz(userId) {
     return this.queryClass.getActiveQuiz(userId);
-  }
-
-  /**
-   * Get all questions for a specific quiz by ID
-   * @param {Number} quizId - The ID of the quiz
-   * @returns {Array} - The list of questions
-   */
-  async listAllQuestions(quizId) {
-    return this.queryClass.findQuestionsByQuizId(quizId);
   }
 
   /**
@@ -198,8 +191,26 @@ class Quiz extends Model {
       userId,
       quizId
     );
-    console.log('Model : ', quizResults);
     return quizResults;
+  }
+
+  /**
+   * Update the status of a quiz
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Boolean} isActive - The new status of the quiz
+   * @returns {Object} - The updated quiz
+   */
+  async updateQuizStatus(quizId, isActive) {
+    return this.queryClass.updateQuizStatusById(quizId, isActive);
+  }
+
+  /**
+   * Get active quizzes taken by a user in the past
+   * @param {Number} userId - The ID of the user
+   * @returns {Array} - List of active quizzes
+   */
+  async getUserActiveQuizzes(userId) {
+    return this.queryClass.getUserActiveQuizzes(userId);
   }
 }
 

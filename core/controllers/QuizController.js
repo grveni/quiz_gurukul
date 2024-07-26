@@ -198,6 +198,7 @@ class QuizController extends Controller {
       if (!quiz) {
         return res.status(404).json({ message: 'Quiz not found' });
       }
+      console.log('getQuiz : ', quiz);
       res.status(200).json({ quiz });
     } catch (error) {
       console.error('Error fetching quiz:', error);
@@ -215,6 +216,7 @@ class QuizController extends Controller {
     try {
       const { quizId } = req.params;
       const questions = await Quiz.listAllQuestions(quizId);
+      console.log(questions);
       res.status(200).json({ questions });
     } catch (error) {
       console.error('Error fetching questions:', error);
@@ -264,6 +266,12 @@ class QuizController extends Controller {
    */
   async deleteQuestion(req, res) {
     try {
+      const isValid = await this.inputValidation(
+        ['quizId', 'questionId'],
+        req,
+        res
+      );
+      if (!isValid) return;
       const { quizId, questionId } = req.params;
       const deletedQuestion = await Quiz.deleteQuestion(quizId, questionId);
       console.log(quizId, questionId);
@@ -316,23 +324,6 @@ class QuizController extends Controller {
     } catch (error) {
       console.error('Error fetching quizzes:', error);
       res.status(500).json({ message: 'Failed to fetch quizzes' });
-    }
-  }
-
-  /**
-   * Get all questions of a specific quiz
-   * @param {Object} req - The request object
-   * @param {Object} res - The response object
-   * @returns {void}
-   */
-  async listAllQuestions(req, res) {
-    try {
-      const { quizId } = req.params;
-      const questions = await Quiz.getAllQuestions(quizId);
-      res.status(200).json({ questions });
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-      res.status(500).json({ message: 'Failed to fetch questions' });
     }
   }
 
@@ -402,7 +393,6 @@ class QuizController extends Controller {
       if (!quizResults) {
         return res.status(404).json({ message: 'Quiz results not found' });
       }
-      console.log(quizResults.questions.length);
       const totalQuestions = quizResults.questions.length;
       const percentageScore = (
         (quizResults.score / totalQuestions) *
@@ -440,6 +430,52 @@ class QuizController extends Controller {
       res.status(200).json({ message: 'successfully submitted!' });
     } catch (error) {
       this.handleError(res, error);
+    }
+  }
+
+  async updateQuizStatus(req, res) {
+    const { quizId } = req.params;
+    const { is_active } = req.body;
+
+    try {
+      const isActive = is_active === true || is_active === 'true';
+      console.log(isActive);
+      const quiz = await Quiz.updateQuizStatus(quizId, isActive);
+      console.log('returned obj from model:', quiz);
+      if (!quiz) {
+        return res.status(404).json({ error: 'Quiz not found' });
+      }
+      res.status(200).json(quiz);
+    } catch (error) {
+      console.log(error.message);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getStudentQuizzes(req, res) {
+    const userId = req.user.id;
+    console.log('get student active quizzes', userId);
+    try {
+      const quizzes = await Quiz.getUserActiveQuizzes(userId);
+
+      console.log('quizzes', quizzes);
+      res.json(quizzes);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getQuizForTaking(req, res) {
+    const { quizId } = req.params;
+    try {
+      const quiz = await Quiz.getQuizById(quizId);
+      const qns = await Quiz.listAllQuestions(quizId);
+      console.log(qns.map((qns) => qns.id));
+
+      quiz.questions = qns;
+      res.status(200).json({ quiz });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   }
 }
