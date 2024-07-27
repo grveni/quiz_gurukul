@@ -1,54 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import schemaConfig from '../../schemaConfig.json';
+import { fetchConfig, fetchRoles, registerUser } from '../../utils/AuthAPI';
+import { useNavigate } from 'react-router-dom';
 
 const RegisterForm = () => {
-  const API_URL = 'http://localhost:5001';
-
-  const formFields = schemaConfig.users
-    .filter((field) => field.name !== 'role_id')
-    .map((field) => ({
-      name: field.name,
-      type: field.type.toLowerCase().includes('varchar') ? 'text' : 'password',
-      placeholder: field.name.charAt(0).toUpperCase() + field.name.slice(1),
-    }));
-
-  const [formData, setFormData] = useState(
-    formFields.reduce((acc, field) => {
-      acc[field.name] = '';
-      return acc;
-    }, {})
-  );
+  const [formFields, setFormFields] = useState([]);
+  const [formData, setFormData] = useState({});
   const [roles, setRoles] = useState([]);
   const [selectedRole, setSelectedRole] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [globalErrors, setGlobalErrors] = useState([]);
   const [success, setSuccess] = useState('');
   const [userDetails, setUserDetails] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchRoles() {
+    async function fetchInitialData() {
       try {
-        console.log('Fetching roles from frontend'); // Debugging statement
-        const response = await fetch('http://localhost:5001/api/auth/roles', {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache', // Disable caching
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const result = await response.json();
-        console.log('Roles fetched from frontend:', result); // Debugging statement
-        setRoles(result.roles);
+        const config = await fetchConfig();
+        const formFieldsConfig = config.fields || config.data?.fields || {};
+        setFormFields(
+          Object.keys(formFieldsConfig).map((key) => ({
+            name: key,
+            ...formFieldsConfig[key],
+          }))
+        );
+        setFormData(
+          Object.keys(formFieldsConfig).reduce((acc, field) => {
+            acc[field] = '';
+            return acc;
+          }, {})
+        );
       } catch (err) {
-        console.error('Failed to load roles:', err); // Debugging statement
-        setGlobalErrors([{ msg: 'Failed to load roles' }]);
+        setGlobalErrors((prevErrors) => [
+          ...prevErrors,
+          { msg: `Error fetching config: ${err.message}` },
+        ]);
+      }
+
+      try {
+        const rolesData = await fetchRoles();
+        setRoles(rolesData);
+      } catch (err) {
+        setGlobalErrors((prevErrors) => [...prevErrors, { msg: err.message }]);
       }
     }
-    fetchRoles();
+
+    fetchInitialData();
   }, []);
 
   const handleChange = (e) => {
@@ -68,56 +65,52 @@ const RegisterForm = () => {
     setGlobalErrors([]);
     setSuccess('');
 
-    try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...formData, role_id: selectedRole }),
-      });
+    const dataToSubmit = {
+      ...formData,
+      role_id: selectedRole,
+    };
 
-      const result = await response.json();
-      if (response.ok) {
-        setSuccess('User registered successfully');
-        setUserDetails(result.user);
-      } else {
-        if (result.errors) {
-          const fieldErrorMap = {};
-          result.errors.forEach((error) => {
-            fieldErrorMap[error.path] = error.msg;
-          });
-          setFieldErrors(fieldErrorMap);
-        } else {
-          setGlobalErrors([{ msg: result.message || 'An error occurred' }]);
-        }
-      }
+    try {
+      const result = await registerUser(dataToSubmit);
+      setSuccess('User registered successfully');
+      setUserDetails(result.user);
+      setTimeout(() => navigate('/login'), 2000); // Redirect to login after 2 seconds
     } catch (err) {
-      console.error('Error during registration:', err);
-      setGlobalErrors([{ msg: 'An error occurred' }]);
+      setGlobalErrors([{ msg: err.message }]);
     }
   };
 
+  const renderInputField = (field) => {
+    const { name, form } = field;
+    const { type, placeholder, validations } = form;
+
+    return (
+      <div key={name} className="form-field">
+        <input
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={formData[name]}
+          onChange={handleChange}
+          required={validations?.required}
+          minLength={validations?.minLength}
+          maxLength={validations?.maxLength}
+          pattern={validations?.pattern}
+        />
+        {fieldErrors[name] && (
+          <p className="error-message">{fieldErrors[name]}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="nested-home-container">
+    <div className="form-container">
       <h1>Register</h1>
-      <form className="form-container" onSubmit={handleSubmit}>
-        {formFields.map((field) => (
-          <div key={field.name} className="form-field">
-            <input
-              type={field.type}
-              name={field.name}
-              placeholder={field.placeholder}
-              value={formData[field.name]}
-              onChange={handleChange}
-            />
-            {fieldErrors[field.name] && (
-              <p style={{ color: 'red' }}>{fieldErrors[field.name]}</p>
-            )}
-          </div>
-        ))}
+      <form onSubmit={handleSubmit}>
+        {formFields.map(renderInputField)}
         <div className="form-field">
-          <select value={selectedRole} onChange={handleRoleChange}>
+          <select value={selectedRole} onChange={handleRoleChange} required>
             <option value="">Select Role</option>
             {roles.map((role) => (
               <option key={role.id} value={role.id}>
@@ -126,23 +119,23 @@ const RegisterForm = () => {
             ))}
           </select>
           {fieldErrors['role_id'] && (
-            <p style={{ color: 'red' }}>{fieldErrors['role_id']}</p>
+            <p className="error-message">{fieldErrors['role_id']}</p>
           )}
         </div>
         <button type="submit">Register</button>
       </form>
       {globalErrors.length > 0 && (
-        <div style={{ color: 'red' }}>
+        <div className="error-message">
           {globalErrors.map((error, index) => (
             <p key={index}>{error.msg}</p>
           ))}
         </div>
       )}
       {success && (
-        <div>
-          <p style={{ color: 'green' }}>{success}</p>
+        <div className="success-message">
+          <p>{success}</p>
           {userDetails && (
-            <div>
+            <div className="user-details">
               <h3>User Details:</h3>
               <p>Username: {userDetails.username}</p>
               <p>Email: {userDetails.email}</p>

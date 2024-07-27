@@ -1,0 +1,61 @@
+{
+  "fields": {
+    "username": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Username",
+        "validations": {
+          "required": true,
+          "minLength": 3,
+          "maxLength": 255
+        }
+      }
+    },
+    "email": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL UNIQUE"
+      },
+      "form": {
+        "type": "email",
+        "placeholder": "Email",
+        "validations": {
+          "required": true,
+          "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        }
+      }
+    },
+    "phone": {
+      "db": {
+        "type": "VARCHAR(20)",
+        "constraints": "NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Mobile",
+        "validations": {
+          "required": false,
+          "pattern": "^\\+?[0-9]{10,15}$"
+        }
+      }
+    },
+    "password": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "password",
+        "placeholder": "Password",
+        "validations": {
+          "required": true,
+          "minLength": 6
+        }
+      }
+    }
+  }
+}

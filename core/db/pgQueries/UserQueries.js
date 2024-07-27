@@ -9,13 +9,43 @@ class UserQueries extends Query {
     super('users');
   }
 
-  async create(username, email, password) {
+  async createUserAndRole(data) {
+    const client = await db.pool.connect();
+    const { username, email, password, phone, role_id } = data;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await db.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *',
-      [username, email, hashedPassword]
-    );
-    return result.rows[0];
+
+    try {
+      await client.query('BEGIN');
+
+      const userQuery = `
+        INSERT INTO users (username, email, password, phone)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id;
+      `;
+      const userValues = [username, email, hashedPassword, phone];
+      const userResult = await client.query(userQuery, userValues);
+
+      const userId = userResult.rows[0].id;
+
+      const roleQuery = 'SELECT * FROM roles WHERE id = $1';
+      const roleResult = await client.query(roleQuery, [role_id]);
+
+      if (roleResult.rows.length === 0) {
+        throw new Error('Invalid role');
+      }
+
+      const addRoleQuery =
+        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)';
+      await client.query(addRoleQuery, [userId, role_id]);
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error during transaction:', err);
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async findByEmail(email) {
@@ -23,13 +53,6 @@ class UserQueries extends Query {
       email,
     ]);
     return result.rows[0];
-  }
-
-  async addRole(userId, roleId) {
-    await db.query(
-      'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)',
-      [userId, roleId]
-    );
   }
 
   async comparePassword(candidatePassword, storedPassword) {

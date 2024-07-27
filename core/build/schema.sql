@@ -5,6 +5,7 @@
           id SERIAL PRIMARY KEY,
           username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(20) NULL,
     password VARCHAR(255) NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -48,7 +49,6 @@
           quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
           question_text TEXT NOT NULL,
           question_type VARCHAR(50) NOT NULL,
-          correct_answer TEXT,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
       );

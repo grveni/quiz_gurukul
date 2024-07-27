@@ -4,7 +4,8 @@ import RegisterForm from './components/forms/RegisterForm';
 import LoginForm from './components/forms/LoginForm';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
-import { getUserRole } from './utils/Auth';
+import { getUserRole } from './utils/AuthAPI';
+import './index.css'; // Assuming you have an App.css file for styles
 
 const Home = ({ setFormType }) => {
   const navigate = useNavigate();
@@ -21,9 +22,10 @@ const Home = ({ setFormType }) => {
 
   return (
     <div className="home-container">
-      <h1>Welcome</h1>
-      <button onClick={handleRegister}>Register</button>
-      <button onClick={handleLogin}>Login</button>
+      <div className="content">
+        <h2>Dummy Content</h2>
+        <p>This is some dummy content to fill the main body of the page.</p>
+      </div>
     </div>
   );
 };
@@ -51,14 +53,24 @@ const App = () => {
   }, [role, navigate]);
 
   return (
-    <div className="container">
-      <Routes>
-        <Route path="/" element={<Home setFormType={setFormType} />} />
-        <Route path="/register" element={<RegisterForm />} />
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/admin/*" element={<AdminDashboardPage />} />
-        <Route path="/student/*" element={<StudentDashboardPage />} />
-      </Routes>
+    <div className="wrapper">
+      <header className="header">
+        <button onClick={() => navigate('/')}>Home</button>
+        <button onClick={() => navigate('/register')}>Register</button>
+        <button onClick={() => navigate('/login')}>Login</button>
+      </header>
+      <main className="content-wrapper">
+        <Routes>
+          <Route path="/" element={<Home setFormType={setFormType} />} />
+          <Route path="/register" element={<RegisterForm />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/admin/*" element={<AdminDashboardPage />} />
+          <Route path="/student/*" element={<StudentDashboardPage />} />
+        </Routes>
+      </main>
+      <footer className="footer">
+        <p>&copy; 2024 Quiz System</p>
+      </footer>
     </div>
   );
 };

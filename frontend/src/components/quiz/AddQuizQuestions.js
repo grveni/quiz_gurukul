@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getQuizzes, addQuestions } from '../../utils/QuizAPI';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../../utils/Auth';
+import { logout } from '../../utils/AuthAPI';
 
 const AddQuestions = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -12,6 +12,7 @@ const AddQuestions = () => {
       questionText: '',
       questionType: 'multiple-choice',
       options: [{ text: '', is_correct: false }],
+      correctAnswer: '', // Adding correctAnswer field for text type questions
     },
   ]);
   const [message, setMessage] = useState('');
@@ -46,7 +47,12 @@ const AddQuestions = () => {
   const handleQuestionChange = (index, field, value) => {
     const newQuestions = [...questions];
     newQuestions[index][field] = value;
-    if (field === 'questionType' && value !== 'multiple-choice') {
+    if (field === 'questionType' && value === 'true-false') {
+      newQuestions[index].options = [
+        { text: 'True', is_correct: false },
+        { text: 'False', is_correct: false },
+      ];
+    } else if (field === 'questionType' && value !== 'multiple-choice') {
       newQuestions[index].options = [
         { text: value === 'true-false' ? 'True' : '', is_correct: false },
         { text: value === 'true-false' ? 'False' : '', is_correct: false },
@@ -74,6 +80,7 @@ const AddQuestions = () => {
         questionText: '',
         questionType: 'multiple-choice',
         options: [{ text: '', is_correct: false }],
+        correctAnswer: '', // Adding correctAnswer field for text type questions
       },
     ]);
   };
@@ -84,28 +91,31 @@ const AddQuestions = () => {
     setError('');
     // Validate no empty fields
     for (const question of questions) {
-      if (
-        !question.questionText.trim() ||
-        (question.questionType === 'text' && !question.correctAnswer.trim())
-      ) {
+      if (!question.questionText.trim()) {
         setError('Please fill out all fields.');
         return;
       }
-      let correctOptionSelected = false;
-      for (const option of question.options) {
-        if (!option.text.trim()) {
-          setError('Please fill out all fields.');
+      if (question.questionType === 'text' && !question.correctAnswer.trim()) {
+        setError('Please fill out all fields.');
+        return;
+      }
+      if (question.questionType !== 'text') {
+        let correctOptionSelected = false;
+        for (const option of question.options) {
+          if (!option.text.trim()) {
+            setError('Please fill out all fields.');
+            return;
+          }
+          if (option.is_correct) {
+            correctOptionSelected = true;
+          }
+        }
+        if (!correctOptionSelected) {
+          setError(
+            'Please select at least one correct option for each question.'
+          );
           return;
         }
-        if (option.is_correct) {
-          correctOptionSelected = true;
-        }
-      }
-      if (question.questionType !== 'text' && !correctOptionSelected) {
-        setError(
-          'Please select at least one correct option for each question.'
-        );
-        return;
       }
     }
     try {
@@ -116,6 +126,7 @@ const AddQuestions = () => {
           questionText: '',
           questionType: 'multiple-choice',
           options: [{ text: '', is_correct: false }],
+          correctAnswer: '', // Adding correctAnswer field for text type questions
         },
       ]);
     } catch (error) {
@@ -194,6 +205,7 @@ const AddQuestions = () => {
                     }
                     placeholder={`Option ${oIndex + 1}`}
                     required
+                    disabled={question.questionType === 'true-false'}
                   />
                   <label>
                     <input
@@ -210,10 +222,12 @@ const AddQuestions = () => {
                     />
                     Correct
                   </label>
-                  <DeleteIcon
-                    onClick={() => handleDeleteOption(qIndex, oIndex)}
-                    style={{ cursor: 'pointer' }}
-                  />
+                  {question.questionType === 'multiple-choice' && (
+                    <DeleteIcon
+                      onClick={() => handleDeleteOption(qIndex, oIndex)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  )}
                 </div>
               ))}
             {question.questionType === 'text' && (

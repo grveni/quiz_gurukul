@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../../utils/Auth'; // Assume you have a login function in auth.js
+import { login } from '../../utils/AuthAPI';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -11,27 +11,23 @@ const LoginForm = () => {
   const handleLogin = async () => {
     setError('');
     try {
-      const userRole = await login(email, password); // Assume login returns the user role
+      const userRole = await login(email, password);
       if (userRole === 'admin') {
         navigate('/admin');
       } else if (userRole === 'student') {
         navigate('/student');
       } else {
-        setError('LoginForm : Invalid role');
+        setError('Invalid role');
       }
     } catch (err) {
-      if (err.message) {
-        setError(err.message);
-      } else {
-        setError('Login failed');
-      }
+      setError(err.message || 'Login failed');
     }
   };
 
   return (
-    <div className="nested-home-container">
+    <div className="form-container">
       <h1>Login</h1>
-      <div className="form-container">
+      <div className="form-field">
         <input
           type="email"
           name="email"
@@ -39,6 +35,8 @@ const LoginForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+      </div>
+      <div className="form-field">
         <input
           type="password"
           name="password"
@@ -46,9 +44,9 @@ const LoginForm = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button onClick={handleLogin}>Login</button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
       </div>
+      <button onClick={handleLogin}>Login</button>
+      {error && <p className="error-message">{error}</p>}
     </div>
   );
 };

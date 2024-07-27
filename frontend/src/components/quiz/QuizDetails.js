@@ -13,7 +13,7 @@ import {
 
 const QuizDetails = () => {
   const { quizId } = useParams();
-  const [quiz, setQuiz] = useState(null);
+  const [quiz, setQuiz] = useState({ title: '', description: '' });
   const [questions, setQuestions] = useState([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +23,7 @@ const QuizDetails = () => {
     async function fetchQuizDetails() {
       try {
         const quizData = await getQuiz(quizId);
-        console.log(quizData);
+        console.log('Fetched Quiz Data:', quizData);
         if (quizData) {
           setQuiz(quizData);
         } else {
@@ -31,6 +31,7 @@ const QuizDetails = () => {
         }
 
         const questionData = await listAllQuestions(quizId);
+        console.log('Fetched Question Data:', questionData);
         if (questionData && Array.isArray(questionData.questions)) {
           setQuestions(questionData.questions);
         } else {
@@ -56,6 +57,12 @@ const QuizDetails = () => {
   const handleQuestionChange = (index, field, value) => {
     const newQuestions = [...questions];
     newQuestions[index][field] = value;
+    if (field === 'question_type' && value === 'true-false') {
+      newQuestions[index].options = [
+        { option_text: 'True', is_correct: false },
+        { option_text: 'False', is_correct: false },
+      ];
+    }
     setQuestions(newQuestions);
   };
 
@@ -81,6 +88,7 @@ const QuizDetails = () => {
       setError('Failed to delete question');
     }
   };
+
   return (
     <div className="dashboard-content">
       {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -196,19 +204,7 @@ const QuizDetails = () => {
                 <label>Options</label>
                 {question.options.map((option, oIndex) => (
                   <div key={oIndex} className="option-block">
-                    <input
-                      type="text"
-                      value={option.option_text}
-                      onChange={(e) =>
-                        handleOptionChange(
-                          index,
-                          oIndex,
-                          'option_text',
-                          e.target.value
-                        )
-                      }
-                      required
-                    />
+                    <input type="text" value={option.option_text} readOnly />
                     <label>
                       <input
                         type="checkbox"
@@ -233,9 +229,9 @@ const QuizDetails = () => {
               <label>Correct Answer</label>
               <input
                 type="text"
-                value={question.correct_answer}
+                value={question.options[0]?.option_text || ''}
                 onChange={(e) =>
-                  handleQuestionChange(index, 'correct_answer', e.target.value)
+                  handleOptionChange(index, 0, 'option_text', e.target.value)
                 }
                 required
               />

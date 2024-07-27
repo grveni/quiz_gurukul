@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const db = require('./db/db');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -46,7 +47,22 @@ app.use('/api/auth/login', limiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
 
+// Route to check and serve the JSON file
+app.get('/config/userDetailsConfig.json', (req, res) => {
+  console.log('did not get here');
+  const filePath = path.join(__dirname, 'config', 'userDetailsConfig.json');
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      res.status(404).send({ error: 'Config file not found' });
+    } else {
+      console.log('file exists', filePath);
+      res.sendFile(filePath);
+    }
+  });
+});
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {

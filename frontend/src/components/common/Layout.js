@@ -5,7 +5,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import QuizIcon from '@mui/icons-material/Quiz';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../../utils/Auth';
+import { logout } from '../../utils/AuthAPI';
 
 const Layout = ({ role }) => {
   const navigate = useNavigate();

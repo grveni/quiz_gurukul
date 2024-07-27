@@ -2,35 +2,35 @@
 
 const Model = require('./Model');
 const userQueries = require('../db/pgQueries/UserQueries');
+const path = require('path');
+const fs = require('fs');
 
 class User extends Model {
   constructor() {
     super(userQueries);
+    this.configPath = path.join(
+      __dirname,
+      '../../public/config/userDetailsConfig.json'
+    );
+  }
+
+  getConfig() {
+    const data = fs.readFileSync(this.configPath);
+    return JSON.parse(data);
   }
 
   async create(data) {
-    const { username, email, password } = data;
-    // Add validation and sanitization logic here
-    if (!username || !email || !password) {
-      throw new Error('All fields are required');
+    try {
+      await this.queryClass.createUserAndRole(data);
+      return { success: true };
+    } catch (err) {
+      console.error('Error in User.create:', err);
+      return { success: false, error: err };
     }
-    return this.queryClass.create(username, email, password);
   }
 
   async findByEmail(email) {
-    // Add validation and sanitization logic here
-    if (!email) {
-      throw new Error('Email is required');
-    }
     return this.queryClass.findByEmail(email);
-  }
-
-  async addRole(userId, roleId) {
-    // Add validation and sanitization logic here
-    if (!userId || !roleId) {
-      throw new Error('User ID and Role ID are required');
-    }
-    return this.queryClass.addRole(userId, roleId);
   }
 
   async comparePassword(candidatePassword, storedPassword) {

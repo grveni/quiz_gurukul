@@ -7,26 +7,29 @@ require('dotenv').config();
 
 class SchemaGenerator {
   constructor() {
-    this.userFieldsPath = path.join(__dirname, 'userFields.json');
+    this.configPath = path.join(
+      __dirname,
+      '../public/config/userDetailsConfig.json'
+    );
     this.schemaFilePath = path.join(__dirname, 'schema.sql');
   }
 
-  readUserFields() {
-    const data = fs.readFileSync(this.userFieldsPath);
+  readConfig() {
+    const data = fs.readFileSync(this.configPath);
     return JSON.parse(data);
   }
 
   generateUsersTable() {
-    const { users } = this.readUserFields();
-    let fields = users
-      .map((field) => `${field.name} ${field.type} ${field.constraints}`)
-      .join(',\n    ');
-
+    const { fields } = this.readConfig();
+    let fieldsArray = Object.keys(fields).map(
+      (key) => `${key} ${fields[key].db.type} ${fields[key].db.constraints}`
+    );
+    let fieldsString = fieldsArray.join(',\n    ');
     return `
       DROP TABLE IF EXISTS users CASCADE;
       CREATE TABLE users (
           id SERIAL PRIMARY KEY,
-          ${fields},
+          ${fieldsString},
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -146,6 +149,7 @@ class SchemaGenerator {
       await client.connect();
       console.log('Connected to the database.');
 
+      const dropDatabaseQuery = `DROP DATABASE IF EXISTS ${dbName};`;
       const createDbUserQuery = `
         DO $$ 
         BEGIN
@@ -154,10 +158,10 @@ class SchemaGenerator {
           END IF;
         END $$;
       `;
+      const createDatabaseQuery = `CREATE DATABASE ${dbName} OWNER ${dbUser};`;
 
-      const createDatabaseQuery = `
-        CREATE DATABASE ${dbName} OWNER ${dbUser};
-      `;
+      await client.query(dropDatabaseQuery);
+      console.log(`Database ${dbName} dropped if it existed.`);
 
       await client.query(createDbUserQuery);
       console.log(`User ${dbUser} created or already exists.`);
