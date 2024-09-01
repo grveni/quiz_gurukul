@@ -9,10 +9,9 @@ const AddQuestions = () => {
   const [selectedQuiz, setSelectedQuiz] = useState('');
   const [questions, setQuestions] = useState([
     {
-      questionText: '',
-      questionType: 'multiple-choice',
-      options: [{ text: '', is_correct: false }],
-      correctAnswer: '', // Adding correctAnswer field for text type questions
+      question_text: '',
+      question_type: 'multiple-choice',
+      options: [{ option_text: '', is_correct: false }],
     },
   ]);
   const [message, setMessage] = useState('');
@@ -34,7 +33,7 @@ const AddQuestions = () => {
 
   const handleAddOption = (index) => {
     const newQuestions = [...questions];
-    newQuestions[index].options.push({ text: '', is_correct: false });
+    newQuestions[index].options.push({ option_text: '', is_correct: false });
     setQuestions(newQuestions);
   };
 
@@ -47,15 +46,21 @@ const AddQuestions = () => {
   const handleQuestionChange = (index, field, value) => {
     const newQuestions = [...questions];
     newQuestions[index][field] = value;
-    if (field === 'questionType' && value === 'true-false') {
+    if (field === 'question_type' && value === 'true-false') {
       newQuestions[index].options = [
-        { text: 'True', is_correct: false },
-        { text: 'False', is_correct: false },
+        { option_text: 'True', is_correct: false },
+        { option_text: 'False', is_correct: false },
       ];
-    } else if (field === 'questionType' && value !== 'multiple-choice') {
+    } else if (field === 'question_type' && value !== 'multiple-choice') {
       newQuestions[index].options = [
-        { text: value === 'true-false' ? 'True' : '', is_correct: false },
-        { text: value === 'true-false' ? 'False' : '', is_correct: false },
+        {
+          option_text: value === 'true-false' ? 'True' : '',
+          is_correct: false,
+        },
+        {
+          option_text: value === 'true-false' ? 'False' : '',
+          is_correct: false,
+        },
       ];
     }
     setQuestions(newQuestions);
@@ -77,10 +82,9 @@ const AddQuestions = () => {
     setQuestions([
       ...questions,
       {
-        questionText: '',
-        questionType: 'multiple-choice',
-        options: [{ text: '', is_correct: false }],
-        correctAnswer: '', // Adding correctAnswer field for text type questions
+        question_text: '',
+        question_type: 'multiple-choice',
+        options: [{ option_text: '', is_correct: false }],
       },
     ]);
   };
@@ -91,18 +95,21 @@ const AddQuestions = () => {
     setError('');
     // Validate no empty fields
     for (const question of questions) {
-      if (!question.questionText.trim()) {
+      if (!question.question_text.trim()) {
         setError('Please fill out all fields.');
         return;
       }
-      if (question.questionType === 'text' && !question.correctAnswer.trim()) {
+      if (
+        question.question_type === 'text' &&
+        !question.options[0].option_text.trim()
+      ) {
         setError('Please fill out all fields.');
         return;
       }
-      if (question.questionType !== 'text') {
+      if (question.question_type !== 'text') {
         let correctOptionSelected = false;
         for (const option of question.options) {
-          if (!option.text.trim()) {
+          if (!option.option_text.trim()) {
             setError('Please fill out all fields.');
             return;
           }
@@ -123,10 +130,9 @@ const AddQuestions = () => {
       setMessage('Questions added successfully!');
       setQuestions([
         {
-          questionText: '',
-          questionType: 'multiple-choice',
-          options: [{ text: '', is_correct: false }],
-          correctAnswer: '', // Adding correctAnswer field for text type questions
+          question_text: '',
+          question_type: 'multiple-choice',
+          options: [{ option_text: '', is_correct: false }],
         },
       ]);
     } catch (error) {
@@ -173,9 +179,9 @@ const AddQuestions = () => {
               <label>Question Text</label>
               <input
                 type="text"
-                value={question.questionText}
+                value={question.question_text}
                 onChange={(e) =>
-                  handleQuestionChange(qIndex, 'questionText', e.target.value)
+                  handleQuestionChange(qIndex, 'question_text', e.target.value)
                 }
                 required
               />
@@ -183,9 +189,9 @@ const AddQuestions = () => {
             <div>
               <label>Question Type</label>
               <select
-                value={question.questionType}
+                value={question.question_type}
                 onChange={(e) =>
-                  handleQuestionChange(qIndex, 'questionType', e.target.value)
+                  handleQuestionChange(qIndex, 'question_type', e.target.value)
                 }
               >
                 <option value="multiple-choice">Multiple Choice</option>
@@ -193,19 +199,24 @@ const AddQuestions = () => {
                 <option value="text">Text</option>
               </select>
             </div>
-            {(question.questionType === 'multiple-choice' ||
-              question.questionType === 'true-false') &&
+            {(question.question_type === 'multiple-choice' ||
+              question.question_type === 'true-false') &&
               question.options.map((option, oIndex) => (
                 <div key={oIndex} className="option-block">
                   <input
                     type="text"
-                    value={option.text}
+                    value={option.option_text}
                     onChange={(e) =>
-                      handleOptionChange(qIndex, oIndex, 'text', e.target.value)
+                      handleOptionChange(
+                        qIndex,
+                        oIndex,
+                        'option_text',
+                        e.target.value
+                      )
                     }
                     placeholder={`Option ${oIndex + 1}`}
                     required
-                    disabled={question.questionType === 'true-false'}
+                    disabled={question.question_type === 'true-false'}
                   />
                   <label>
                     <input
@@ -222,7 +233,7 @@ const AddQuestions = () => {
                     />
                     Correct
                   </label>
-                  {question.questionType === 'multiple-choice' && (
+                  {question.question_type === 'multiple-choice' && (
                     <DeleteIcon
                       onClick={() => handleDeleteOption(qIndex, oIndex)}
                       style={{ cursor: 'pointer' }}
@@ -230,24 +241,20 @@ const AddQuestions = () => {
                   )}
                 </div>
               ))}
-            {question.questionType === 'text' && (
+            {question.question_type === 'text' && (
               <div>
                 <label>Correct Answer</label>
                 <input
                   type="text"
-                  value={question.correctAnswer}
+                  value={question.options[0]?.option_text || ''}
                   onChange={(e) =>
-                    handleQuestionChange(
-                      qIndex,
-                      'correctAnswer',
-                      e.target.value
-                    )
+                    handleOptionChange(qIndex, 0, 'option_text', e.target.value)
                   }
                   required
                 />
               </div>
             )}
-            {question.questionType === 'multiple-choice' && (
+            {question.question_type === 'multiple-choice' && (
               <button type="button" onClick={() => handleAddOption(qIndex)}>
                 Add Option
               </button>
