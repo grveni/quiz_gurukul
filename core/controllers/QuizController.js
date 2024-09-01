@@ -35,50 +35,20 @@ class QuizController extends Controller {
             .escape()
             .run(req);
           break;
-        case 'questionText':
-          await body(field)
-            .isString()
-            .notEmpty()
-            .withMessage('Question text is required and must be a string')
-            .trim()
-            .escape()
-            .run(req);
-          break;
-        case 'questionType':
-          await body(field)
-            .isString()
-            .isIn(['multiple-choice', 'true-false', 'text'])
-            .withMessage('Invalid question type')
-            .trim()
-            .escape()
-            .run(req);
-          break;
-        case 'options':
-          await body(field)
-            .isArray()
-            .optional()
-            .withMessage('Options must be an array')
-            .run(req);
-          break;
-        case 'correctAnswer':
-          await body(field)
-            .isString()
-            .optional()
-            .withMessage('Correct answer must be a string')
-            .trim()
-            .escape()
-            .run(req);
-          break;
-        case 'quizId':
-          await body(field)
-            .isInt()
-            .withMessage('Quiz ID must be an integer')
-            .run(req);
-          break;
         case 'questions':
           await body(field)
             .isArray()
-            .withMessage('Questions must be an array')
+            .optional()
+            .custom((questions, { req }) => {
+              if (questions && questions.length > 0) {
+                for (const question of questions) {
+                  if (!this.validateQuestion(question)) {
+                    throw new Error(`Invalid question data`);
+                  }
+                }
+              }
+              return true;
+            })
             .run(req);
           break;
         default:
@@ -88,9 +58,68 @@ class QuizController extends Controller {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      // Extract the first error message for simplicity
+      const firstError = errors.array()[0].msg;
+      console.log('first error', firstError);
       res.status(400).json({ errors: errors.array() });
       return false;
     }
+    return true;
+  }
+
+  /**
+   * Validate a single question object
+   * @param {Object} question - The question object to be validated
+   * @returns {Boolean} - Returns true if the question is valid, otherwise false
+   */
+  validateQuestion(question) {
+    if (!question.question_text || typeof question.question_text !== 'string') {
+      console.log(
+        'Validation failed: question_text is missing or not a string.',
+        question
+      );
+      return false;
+    }
+
+    if (
+      ['multiple-choice', 'true-false', 'text'].indexOf(
+        question.question_type
+      ) === -1
+    ) {
+      console.log('Validation failed: question_type is invalid.', question);
+      return false;
+    }
+
+    if (question.question_type === 'multiple-choice') {
+      const hasCorrectOption =
+        question.options && question.options.some((opt) => opt.is_correct);
+      if (!hasCorrectOption || question.options.length < 1) {
+        console.log(
+          'Validation failed: multiple-choice question must have at least one correct option and one option.',
+          question
+        );
+        return false;
+      }
+    } else if (question.question_type === 'true-false') {
+      const hasCorrectOption =
+        question.options && question.options.some((opt) => opt.is_correct);
+      if (!hasCorrectOption || question.options.length !== 2) {
+        console.log(
+          'Validation failed: true-false question must have exactly two options and one correct option.',
+          question
+        );
+        return false;
+      }
+    } else if (question.question_type === 'text') {
+      if (!question.options[0]?.option_text) {
+        console.log(
+          'Validation failed: text question must have a correct answer.',
+          question
+        );
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -328,33 +357,63 @@ class QuizController extends Controller {
   }
 
   /**
-   * Update a quiz by ID
-   * @param {Object} req - The request object
-   * @param {Object} res - The response object
-   * @returns {void}
+   * Update a quiz and its questions.
+   * Validates the title, description, and questions array.
+   * For each question in the questions array, validates the question text, type, options, and correct answer.
+   * Only updates the quiz title and description if they have been edited.
+   * Iterates over the questions to update, add, or mark them as deleted based on the input.
+   * Returns the updated quiz if successful, or an appropriate error message if validation fails.
+   *
+   * @param {Object} req - The request object containing the quiz ID and updated data.
+   * @param {Object} res - The response object to send back the result.
    */
   async updateQuiz(req, res) {
     try {
+      // Log the incoming request parameters
+      console.log('Received updateQuiz request:', req.params);
+      console.log('Received body:', req.body);
+
       const isValid = await this.inputValidation(
-        ['title', 'description'],
+        ['title', 'description', 'questions'],
         req,
         res
       );
       if (!isValid) return;
 
       const { quizId } = req.params;
-      const { title, description, isActive } = req.body;
-      const updatedQuiz = await Quiz.updateQuiz(
-        quizId,
-        title,
-        description,
-        isActive
-      );
-      if (!updatedQuiz) {
-        return res.status(404).json({ message: 'Quiz not found' });
+      const { title, description, questions, metaEdited } = req.body;
+
+      // Log the flags and parameters
+      console.log('Quiz ID:', quizId);
+      console.log('Title:', title);
+      console.log('Description:', description);
+      console.log('Meta Edited:', metaEdited);
+      console.log('Questions:', questions);
+
+      // Update the quiz only if the title or description has been edited
+      let updatedQuiz = null;
+      if (metaEdited) {
+        console.log('Updating quiz metadata...');
+        updatedQuiz = await Quiz.updateQuiz(quizId, title, description);
+        console.log('Updated Quiz:', updatedQuiz);
       }
-      res.status(200).json({ updatedQuiz });
+
+      // Process edited and deleted questions
+      if (questions && questions.length > 0) {
+        console.log('Processing questions...');
+        await Quiz.updateQuizQuestions(quizId, questions);
+        console.log('Questions processed successfully');
+      }
+
+      res.status(200).json({
+        message: 'Quiz updated successfully',
+        updatedQuiz,
+      });
+
+      // Log the success response
+      console.log('Quiz update completed successfully');
     } catch (error) {
+      console.error('Error updating quiz:', error);
       this.handleError(res, error);
     }
   }

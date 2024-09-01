@@ -56,15 +56,57 @@ class Quiz extends Model {
   }
 
   /**
-   * Update a quiz
+   * Update quiz metadata (title and description)
    * @param {Number} quizId - The ID of the quiz
    * @param {String} title - The new title of the quiz
    * @param {String} description - The new description of the quiz
-   * @param {String} isActive - The quiz status bool active to be published or not.
-   * @returns {Object} - The updated quiz
+   * @returns {Object} - The updated quiz object
    */
-  async updateQuiz(quizId, title, description, isActive) {
-    return this.queryClass.updateQuiz(quizId, title, description, isActive);
+  async updateQuiz(quizId, title, description) {
+    console.log('Quiz.updateQuiz called with:', { quizId, title, description });
+    try {
+      const updatedQuiz = await this.queryClass.updateQuiz(
+        quizId,
+        title,
+        description
+      );
+      console.log('Quiz updated:', updatedQuiz);
+      return updatedQuiz;
+    } catch (error) {
+      console.error('Error updating quiz:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update quiz questions based on the provided list of questions
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Array} questions - The list of questions to update
+   * @returns {void}
+   */
+  async updateQuizQuestions(quizId, questions) {
+    console.log('Quiz.updateQuizQuestions called with:', { quizId, questions });
+    try {
+      for (const question of questions) {
+        if (question.deleted) {
+          console.log('Marking question as deleted:', question.id);
+          await this.queryClass.markQuestionAsDeleted(question.id);
+        } else if (question.isEdited) {
+          console.log('Updating question:', question);
+          await this.queryClass.updateQuestion(
+            question.id,
+            question.question_text,
+            question.question_type,
+            question.options,
+            question.correctAnswer
+          );
+        }
+      }
+      console.log('Quiz questions updated successfully.');
+    } catch (error) {
+      console.error('Error updating quiz questions:', error);
+      throw error;
+    }
   }
 
   /**

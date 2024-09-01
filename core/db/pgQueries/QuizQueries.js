@@ -84,45 +84,29 @@ class QuizQueries extends Query {
     for (const question of questions) {
       const result = await db.query(
         'INSERT INTO questions (quiz_id, question_text, question_type) VALUES ($1, $2, $3) RETURNING *',
-        [quizId, question.questionText, question.questionType]
+        [quizId, question.question_text, question.question_type]
       );
       const questionId = result.rows[0].id;
 
       if (
-        question.questionType === 'multiple-choice' ||
-        question.questionType === 'true-false'
+        question.question_type === 'multiple-choice' ||
+        question.question_type === 'true-false'
       ) {
         for (const option of question.options) {
           await db.query(
             'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
-            [questionId, option.text, option.is_correct]
+            [questionId, option.option_text, option.is_correct]
           );
         }
-      } else if (question.questionType === 'text') {
+      } else if (question.question_type === 'text') {
         await db.query(
           'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
-          [questionId, question.correctAnswer, true]
+          [questionId, question.options[0].option_text, true]
         );
       }
       results.push(result.rows[0]);
     }
     return results;
-  }
-
-  /**
-   * Update a quiz
-   * @param {Number} quizId - The ID of the quiz
-   * @param {String} title - The new title of the quiz
-   * @param {String} description - The new description of the quiz
-   * @param {String} isActive - The quiz status bool active to be published or not.
-   * @returns {Object} - The updated quiz
-   */
-  async updateQuiz(quizId, title, description, isActive) {
-    const result = await db.query(
-      `UPDATE quizzes SET title = $1, description = $2, is_active = $3, updated_at = NOW() WHERE id = $4 RETURNING *`,
-      [title, description, isActive, quizId]
-    );
-    return result.rows[0];
   }
 
   /**
@@ -151,7 +135,7 @@ class QuizQueries extends Query {
           ON 
             q.id = o.question_id 
           WHERE 
-            q.quiz_id = $1
+            q.quiz_id = $1 AND q.deleted = false
           `,
         [quizId]
       );
@@ -187,64 +171,11 @@ class QuizQueries extends Query {
 
       const questions = Array.from(questionsMap.values());
 
-      //console.log('Final Questions...:', questions);
-
       return questions;
     } catch (error) {
       console.error('Error fetching questions:', error);
       throw new Error('Failed to fetch questions');
     }
-  }
-
-  /**
-   * Update a question
-   * @param {Number} questionId - The ID of the question
-   * @param {String} questionText - The new text of the question
-   * @param {String} questionType - The new type of the question
-   * @param {Array} options - The new options for the question
-   * @param {String} correctAnswer - The new correct answer for the question
-   * @returns {Object} - The updated question
-   */
-  async updateQuestion(
-    questionId,
-    questionText,
-    questionType,
-    options,
-    correctAnswer
-  ) {
-    const result = await db.query(
-      `UPDATE questions SET question_text = $1, question_type = $2 WHERE id = $3 RETURNING *`,
-      [questionText, questionType, questionId]
-    );
-
-    const question = result.rows[0];
-
-    await db.query(`DELETE FROM options WHERE question_id = $1`, [questionId]);
-
-    if (questionType === 'multiple-choice' && options.length > 0) {
-      for (const option of options) {
-        await db.query(
-          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [questionId, option.text, option.is_correct]
-        );
-      }
-    } else if (questionType === 'true-false') {
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [questionId, 'True', correctAnswer === 'True']
-      );
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [questionId, 'False', correctAnswer === 'False']
-      );
-    } else if (questionType === 'text') {
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [questionId, correctAnswer, true]
-      );
-    }
-
-    return question;
   }
 
   /**
@@ -273,6 +204,7 @@ class QuizQueries extends Query {
     }
     return { message: 'Questions deleted successfully' };
   }
+
   /**
    * Fetch all Quizzes with pagination
    * @param {page} - The total page numbers
@@ -293,7 +225,7 @@ class QuizQueries extends Query {
    */
   async getAllQuestions(quizId) {
     const result = await db.query(
-      `SELECT * FROM questions WHERE quiz_id = $1 ORDER BY created_at ASC`,
+      `SELECT * FROM questions WHERE quiz_id = $1 AND deleted = false ORDER BY created_at ASC`,
       [quizId]
     );
     return result.rows;
@@ -382,13 +314,6 @@ class QuizQueries extends Query {
    * @param {Number} userId - The ID of the user
    * @param {Number} quizId - The ID of the quiz
    * @returns {Object} - The quiz results including score, correct answers, and user responses
-   */
-  // db/pgQueries/QuizQueries.js
-  /**
-   * Get quiz results for a user
-   * @param {Number} userId - The ID of the user
-   * @param {Number} quizId - The ID of the quiz
-   * @returns {Object} - The quiz results including score and questions
    */
   async getQuizResultsForUser(userId, quizId) {
     try {
@@ -519,7 +444,7 @@ class QuizQueries extends Query {
         ON 
           q.id = r.question_id AND r.attempt_id = $2
         WHERE 
-          q.quiz_id = $1
+          q.quiz_id = $1 AND q.deleted = false
       `,
         [quizId, attemptId]
       );
@@ -580,11 +505,11 @@ class QuizQueries extends Query {
       [quizId]
     );
     const questionsResult = await db.query(
-      `SELECT * FROM questions WHERE quiz_id = $1`,
+      `SELECT * FROM questions WHERE quiz_id = $1 AND deleted = false`,
       [quizId]
     );
     const optionsResult = await db.query(
-      `SELECT * FROM options WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = $1)`,
+      `SELECT * FROM options WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = $1 AND deleted = false)`,
       [quizId]
     );
 
@@ -668,6 +593,131 @@ class QuizQueries extends Query {
     );
     console.log(result.rows);
     return result.rows;
+  }
+
+  /**
+   * Update quiz metadata (title and description)
+   * @param {Number} quizId - The ID of the quiz
+   * @param {String} title - The new title of the quiz
+   * @param {String} description - The new description of the quiz
+   * @returns {Object} - The updated quiz object
+   */
+  async updateQuiz(quizId, title, description) {
+    console.log('QuizQueries.updateQuiz called with:', {
+      quizId,
+      title,
+      description,
+    });
+    try {
+      const result = await db.query(
+        `UPDATE quizzes SET title = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
+        [title, description, quizId]
+      );
+      console.log('Quiz updated in database:', result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating quiz in database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a question as deleted
+   * @param {Number} questionId - The ID of the question
+   * @returns {void}
+   */
+  async markQuestionAsDeleted(questionId) {
+    console.log('QuizQueries.markQuestionAsDeleted called with:', {
+      questionId,
+    });
+    try {
+      await db.query(`UPDATE questions SET deleted = true WHERE id = $1`, [
+        questionId,
+      ]);
+      console.log('Question marked as deleted in database:', questionId);
+    } catch (error) {
+      console.error('Error marking question as deleted:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a question by marking the old one as deleted and inserting a new one
+   * @param {Number} questionId - The ID of the existing question
+   * @param {String} questionText - The text of the new question
+   * @param {String} questionType - The type of the new question
+   * @param {Array} options - The options for the new question
+   * @param {String} correctAnswer - The correct answer for the new question
+   * @returns {Object} - The updated question
+   */
+  async updateQuestion(
+    questionId,
+    questionText,
+    questionType,
+    options,
+    correctAnswer
+  ) {
+    console.log('QuizQueries.updateQuestion called with:', {
+      questionId,
+      questionText,
+      questionType,
+      options,
+      correctAnswer,
+    });
+
+    const client = await db.pool.connect(); // Get a client from the connection pool
+
+    try {
+      await client.query('BEGIN'); // Start transaction
+
+      // Mark the existing question as deleted
+      await this.markQuestionAsDeleted(questionId, client);
+
+      // Insert the new question
+      const result = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, question_type, deleted) VALUES ((SELECT quiz_id FROM questions WHERE id = $1), $2, $3, false) RETURNING *`,
+        [questionId, questionText, questionType]
+      );
+      const newQuestion = result.rows[0];
+      console.log('New question inserted:', newQuestion);
+
+      // Insert options based on the question type
+      if (questionType === 'multiple-choice' && options.length > 0) {
+        for (const option of options) {
+          await client.query(
+            `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
+            [newQuestion.id, option.option_text, option.is_correct]
+          );
+        }
+      } else if (questionType === 'true-false') {
+        await client.query(
+          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
+          [newQuestion.id, 'True', correctAnswer === 'True']
+        );
+        await client.query(
+          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
+          [newQuestion.id, 'False', correctAnswer === 'False']
+        );
+      } else if (questionType === 'text') {
+        await client.query(
+          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
+          [newQuestion.id, correctAnswer, true]
+        );
+      }
+
+      await client.query('COMMIT'); // Commit transaction
+      console.log(
+        'Transaction committed, question and options updated successfully.'
+      );
+
+      return newQuestion;
+    } catch (error) {
+      await client.query('ROLLBACK'); // Rollback transaction on error
+      console.error('Transaction rolled back due to error:', error);
+      throw error;
+    } finally {
+      client.release(); // Release the client back to the pool
+    }
   }
 }
 

@@ -151,9 +151,7 @@ class QuizRoutes extends Route {
           .isString()
           .optional()
           .withMessage('Description must be a string'),
-        body('isActive')
-          .isBoolean()
-          .withMessage('isActive must be a boolean value'),
+        body('questions').isArray().withMessage('Questions must be an array'),
       ],
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
       (req, res, next) =>
