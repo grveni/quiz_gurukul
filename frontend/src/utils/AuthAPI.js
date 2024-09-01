@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
-const API_CONFIG_URL = 'http://localhost:5001/config';
-const API_URL = 'http://localhost:5001/api/auth';
+
+const API_CONFIG_URL = process.env.REACT_APP_API_CONFIG_URL || 'http://localhost:5001/api/config';
+const API_URL = process.env.REACT_APP_API_AUTH_URL || 'http://localhost:5001/api/auth';
+
 export const login = async (email, password) => {
   try {
     const response = await axios.post(`${API_URL}/login`, { email, password });
@@ -40,6 +42,7 @@ export const getUserRole = () => {
 // Function to fetch roles
 export const fetchRoles = async () => {
   try {
+    console.log('API URL:', process.env.REACT_AUTH_APP_API_URL);	  
     const response = await axios.get(`${API_URL}/roles`, {
       headers: {
         'Cache-Control': 'no-cache',
