@@ -16,17 +16,17 @@ const Layout = ({ role }) => {
   };
 
   const commonLinks = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: `/${role}` },
+    //{ text: 'Dashboard', icon: <DashboardIcon />, path: `/${role}` },
     { text: 'Quizzes', icon: <QuizIcon />, path: `/${role}/quizzes` },
   ];
 
   const adminLinks = [
     { text: 'Manage Users', icon: <DashboardIcon />, path: '/admin/users' },
-    {
+    /*{
       text: 'Manage Quizzes',
       icon: <QuizIcon />,
       path: '/admin/manage-quizzes',
-    },
+    },*/
     { text: 'Add Quiz', icon: <QuizIcon />, path: '/admin/add-quiz' },
     { text: 'Add Questions', icon: <QuizIcon />, path: '/admin/add-questions' },
   ];
