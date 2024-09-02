@@ -566,11 +566,37 @@ class QuizQueries extends Query {
    * @returns {Object} - The updated quiz
    */
   async updateQuizStatusById(quizId, isActive) {
-    const result = await db.query(
-      `UPDATE quizzes SET is_active = $1 WHERE id = $2 RETURNING *`,
-      [isActive, quizId]
-    );
-    return result.rows[0];
+    try {
+      // Check if there is at least one question that is not marked as deleted
+      const questionCheckResult = await db.query(
+        `SELECT COUNT(*) AS active_questions FROM questions WHERE quiz_id = $1 AND deleted = false`,
+        [quizId]
+      );
+
+      const activeQuestionsCount = parseInt(
+        questionCheckResult.rows[0].active_questions,
+        10
+      );
+
+      // If trying to activate the quiz and there are no active questions, return null
+      if (isActive && activeQuestionsCount === 0) {
+        console.log(
+          `Quiz ${quizId} cannot be published because it has no active questions.`
+        );
+        return null;
+      }
+
+      // Update the quiz status
+      const result = await db.query(
+        `UPDATE quizzes SET is_active = $1 WHERE id = $2 RETURNING *`,
+        [isActive, quizId]
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating quiz status:', error);
+      throw error;
+    }
   }
 
   /**

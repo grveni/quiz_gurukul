@@ -502,7 +502,9 @@ class QuizController extends Controller {
       const quiz = await Quiz.updateQuizStatus(quizId, isActive);
       console.log('returned obj from model:', quiz);
       if (!quiz) {
-        return res.status(404).json({ error: 'Quiz not found' });
+        return res.status(404).json({
+          error: 'Quiz not found or no questions added to be published!',
+        });
       }
       res.status(200).json(quiz);
     } catch (error) {

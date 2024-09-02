@@ -41,7 +41,8 @@ const QuizList = () => {
         )
       );
     } catch (error) {
-      setError('Failed to update quiz status');
+      console.log('Error in handleToggleStatus:', error.message); // Log the error message
+      setError(error.message); // Capture the message from the thrown error
     }
   };
 
