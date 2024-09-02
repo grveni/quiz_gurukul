@@ -13,6 +13,7 @@ const TakeQuiz = () => {
   const [answers, setAnswers] = useState([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [noNewQuiz, setNoNewQuiz] = useState(false); // New state for no quiz scenario
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,21 +27,27 @@ const TakeQuiz = () => {
           console.log('Fetching next untaken quiz');
           quizData = await getNextUntakenQuiz();
         }
-        console.log('Quiz Data:', quizData); // Log the quizData
+        console.log('Quiz Data:', quizData);
 
-        if (quizData && quizData.quiz && quizData.quiz.questions) {
-          // Ensure options are loaded into questions
+        if (
+          !quizData ||
+          !quizData.quiz ||
+          !quizData.quiz.questions ||
+          quizData.quiz.questions.length === 0
+        ) {
+          setNoNewQuiz(true); // Set noNewQuiz to true if no quiz is available
+        } else {
           const questionsWithOptions = quizData.quiz.questions.map(
             (question) => ({
               ...question,
-              options: question.options || [], // Ensure options is always an array
+              options: question.options || [],
             })
           );
 
-          setQuiz((prevQuiz) => ({
+          setQuiz({
             ...quizData.quiz,
             questions: questionsWithOptions,
-          }));
+          });
 
           setAnswers(
             questionsWithOptions.map((question) => ({
@@ -49,8 +56,6 @@ const TakeQuiz = () => {
               answerText: '',
             }))
           );
-        } else {
-          throw new Error('Invalid quiz data structure');
         }
       } catch (err) {
         console.error(err);
@@ -58,7 +63,7 @@ const TakeQuiz = () => {
       }
     }
     fetchQuiz();
-  }, [quizId]); // Add quizId to the dependency array
+  }, [quizId]);
 
   const handleOptionChange = (questionId, optionId, optionText) => {
     const updatedAnswers = answers.map((answer) =>
@@ -85,7 +90,7 @@ const TakeQuiz = () => {
     try {
       console.log('Quiz submitted', quiz.id, answers);
       const result = await submitQuizAnswers(quiz.id, answers);
-      console.log('Quiz Result:', result); // Log the result
+      console.log('Quiz Result:', result);
       const path = `/student/results/${quiz.id}`;
       console.log('Navigating to:', path);
       navigate(path);
@@ -94,10 +99,16 @@ const TakeQuiz = () => {
     }
   };
 
-  if (!quiz) {
-    return <div>Loading...</div>;
+  if (noNewQuiz || !quiz) {
+    // Check if no new quiz is available
+    return (
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <p>No new quiz published.</p>
+        <p>New quizzes will be published soon.</p>
+        <p>Please come back again later.</p>
+      </div>
+    );
   }
-
   return (
     <div className="take-quiz">
       <h2>{quiz.title}</h2>
