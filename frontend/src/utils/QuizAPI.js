@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_QUIZ_URL || 'http://localhost:5001/api/quizzes';
+const API_URL =
+  process.env.REACT_APP_API_QUIZ_URL || 'http://localhost:5001/api/quizzes';
 
 /**
  * Create a new quiz
@@ -304,14 +305,26 @@ export const getQuizResults = async (quizId) => {
 
 export const updateQuizStatus = async (quizId, isActive) => {
   const token = localStorage.getItem('token');
-  const response = await axios.patch(
-    `${API_URL}/${quizId}/status`,
-    { is_active: isActive },
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  return response.data;
+  try {
+    const response = await axios.patch(
+      `${API_URL}/${quizId}/status`,
+      { is_active: isActive },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    // Log the entire error object
+    console.log('API Error Response:', error.response);
+
+    // Capture and throw the exact error message from the backend response
+    const errorMessage =
+      error.response?.data?.error || 'Failed to update quiz status';
+
+    console.log('Error Message:', errorMessage); // Log the error message
+    throw new Error(errorMessage);
+  }
 };
 
 /**
