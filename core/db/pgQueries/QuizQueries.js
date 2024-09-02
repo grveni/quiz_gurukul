@@ -645,24 +645,16 @@ class QuizQueries extends Query {
    * Update a question by marking the old one as deleted and inserting a new one
    * @param {Number} questionId - The ID of the existing question
    * @param {String} questionText - The text of the new question
-   * @param {String} questionType - The type of the new question
-   * @param {Array} options - The options for the new question
-   * @param {String} correctAnswer - The correct answer for the new question
+   * @param {String} questionType - The type of the question
+   * @param {Array} options - The options for the question, with `is_correct` flag
    * @returns {Object} - The updated question
    */
-  async updateQuestion(
-    questionId,
-    questionText,
-    questionType,
-    options,
-    correctAnswer
-  ) {
+  async updateQuestion(questionId, questionText, questionType, options) {
     console.log('QuizQueries.updateQuestion called with:', {
       questionId,
       questionText,
       questionType,
       options,
-      correctAnswer,
     });
 
     const client = await db.pool.connect(); // Get a client from the connection pool
@@ -681,27 +673,11 @@ class QuizQueries extends Query {
       const newQuestion = result.rows[0];
       console.log('New question inserted:', newQuestion);
 
-      // Insert options based on the question type
-      if (questionType === 'multiple-choice' && options.length > 0) {
-        for (const option of options) {
-          await client.query(
-            `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-            [newQuestion.id, option.option_text, option.is_correct]
-          );
-        }
-      } else if (questionType === 'true-false') {
+      // Insert options for the new question
+      for (const option of options) {
         await client.query(
           `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [newQuestion.id, 'True', correctAnswer === 'True']
-        );
-        await client.query(
-          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [newQuestion.id, 'False', correctAnswer === 'False']
-        );
-      } else if (questionType === 'text') {
-        await client.query(
-          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [newQuestion.id, correctAnswer, true]
+          [newQuestion.id, option.option_text, option.is_correct]
         );
       }
 

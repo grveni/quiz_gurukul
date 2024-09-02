@@ -97,8 +97,7 @@ class Quiz extends Model {
             question.id,
             question.question_text,
             question.question_type,
-            question.options,
-            question.correctAnswer
+            question.options
           );
         }
       }
