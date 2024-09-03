@@ -41,9 +41,17 @@ class AuthController extends Controller {
 
   async register(req, res) {
     try {
+      // Ensure 'username' and 'password' fields are present
+      if (!req.body.username || !req.body.password) {
+        return res
+          .status(400)
+          .json({ message: "'username' and 'password' are required fields." });
+      }
+
       // Validate input fields using the JSON config
       const fieldNames = Object.keys(this.config.fields);
       const validationErrors = [];
+
       for (const fieldName of fieldNames) {
         const fieldConfig = this.config.fields[fieldName];
         const errors = this.getFieldValidation(req, fieldConfig, fieldName);
@@ -55,23 +63,28 @@ class AuthController extends Controller {
         return res.status(400).json({ errors: validationErrors });
       }
 
-      const { username, email, password, phone, role_id } = req.body;
+      // Dynamically extract fields from req.body based on the config
+      const userData = {};
+      for (const fieldName of fieldNames) {
+        userData[fieldName] = req.body[fieldName];
+      }
 
-      // Check if user already exists
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
-        console.log('User already exists:', email);
-        return res.status(400).json({ message: 'User already exists' });
+      // Manually add the role_id to userData if it exists in the request body
+      if (req.body.role_id) {
+        userData.role_id = req.body.role_id;
+      }
+
+      // Check if user already exists based on unique fields (e.g., email)
+      if (userData.email) {
+        const existingUser = await User.findByEmail(userData.email);
+        if (existingUser) {
+          console.log('User already exists:', userData.email);
+          return res.status(400).json({ message: 'User already exists' });
+        }
       }
 
       // Create new user and assign role
-      const result = await User.create({
-        username,
-        email,
-        password,
-        phone,
-        role_id,
-      });
+      const result = await User.create(userData);
 
       if (!result.success) {
         return res.status(500).json({ message: 'Internal server error' });
@@ -83,6 +96,7 @@ class AuthController extends Controller {
       return res.status(500).json({ message: 'Internal server error' });
     }
   }
+
   async login(req, res) {
     try {
       // Validate input fields

@@ -11,24 +11,38 @@ class UserQueries extends Query {
 
   async createUserAndRole(data) {
     const client = await db.pool.connect();
-    const { username, email, password, phone, role_id } = data;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
     try {
       await client.query('BEGIN');
 
-      const userQuery = `
-        INSERT INTO users (username, email, password, phone)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id;
-      `;
-      const userValues = [username, email, hashedPassword, phone];
-      const userResult = await client.query(userQuery, userValues);
+      // Filter out role_id from data since it's not a part of the users table
+      // Dynamically create the user insert query based on the config
+      const userFields = Object.keys(data).filter(
+        (field) => field !== 'role_id' && field !== 'password'
+      );
+      const userValues = userFields.map((field) => data[field] || null);
 
+      // Add password to the fields and values arrays
+      userFields.push('password');
+      userValues.push(hashedPassword);
+
+      const placeholders = userFields
+        .map((_, index) => `$${index + 1}`)
+        .join(', ');
+
+      const userQuery = `
+            INSERT INTO users (${userFields.join(', ')})
+            VALUES (${placeholders})
+            RETURNING id;
+        `;
+
+      const userResult = await client.query(userQuery, userValues);
       const userId = userResult.rows[0].id;
 
+      // Validate and insert the user role
       const roleQuery = 'SELECT * FROM roles WHERE id = $1';
-      const roleResult = await client.query(roleQuery, [role_id]);
+      const roleResult = await client.query(roleQuery, [data.role_id]);
 
       if (roleResult.rows.length === 0) {
         throw new Error('Invalid role');
@@ -36,7 +50,7 @@ class UserQueries extends Query {
 
       const addRoleQuery =
         'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)';
-      await client.query(addRoleQuery, [userId, role_id]);
+      await client.query(addRoleQuery, [userId, data.role_id]);
 
       await client.query('COMMIT');
     } catch (err) {

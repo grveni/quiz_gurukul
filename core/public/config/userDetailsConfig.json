@@ -56,6 +56,74 @@
           "minLength": 6
         }
       }
+    },
+    "flat_no": {
+      "db": {
+        "type": "VARCHAR(50)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Flat No.",
+        "validations": {
+          "required": true,
+          "minLength": 1,
+          "maxLength": 50
+        }
+      }
+    },
+    "building_name": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "select",
+        "placeholder": "Select Building",
+        "options": [
+          "1_Apson",
+          "2_Baniyan",
+          "3_Cedar",
+          "4_Delonix",
+          "5_Laurate",
+          "6_Maple",
+          "7_Nectrine",
+          "8_Olive",
+          "9_Palm"
+        ],
+        "validations": {
+          "required": true
+        }
+      }
+    },
+    "parent_name": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Parent Name",
+        "validations": {
+          "required": true,
+          "minLength": 3,
+          "maxLength": 255
+        }
+      }
+    },
+    "standard": {
+      "db": {
+        "type": "VARCHAR(50)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Standard",
+        "validations": {
+          "required": true,
+          "pattern": "^[1-9][0-9]*$"
+        }
+      }
     }
   }
 }

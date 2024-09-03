@@ -82,7 +82,31 @@ const RegisterForm = () => {
 
   const renderInputField = (field) => {
     const { name, form } = field;
-    const { type, placeholder, validations } = form;
+    const { type, placeholder, validations, options } = form;
+
+    if (options && Array.isArray(options)) {
+      // Render dropdown for fields with options
+      return (
+        <div key={name} className="form-field">
+          <select
+            name={name}
+            value={formData[name]}
+            onChange={handleChange}
+            required={validations?.required}
+          >
+            <option value="">{placeholder}</option>
+            {options.map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          {fieldErrors[name] && (
+            <p className="error-message">{fieldErrors[name]}</p>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div key={name} className="form-field">
