@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const db = require('./db/db');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -51,9 +52,13 @@ app.use('/api/quizzes', quizRoutes);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Route to check and serve the JSON file
-app.get('/config/userDetailsConfig.json', (req, res) => {
+app.get('/api/config/userDetailsConfig.json', (req, res) => {
   console.log('did not get here');
-  const filePath = path.join(__dirname, 'config', 'userDetailsConfig.json');
+  const filePath = path.join(
+    __dirname,
+    'public/config',
+    'userDetailsConfig.json'
+  );
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
       res.status(404).send({ error: 'Config file not found' });
