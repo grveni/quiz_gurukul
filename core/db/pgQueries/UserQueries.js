@@ -63,9 +63,11 @@ class UserQueries extends Query {
   }
 
   async findByEmail(email) {
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [
-      email,
-    ]);
+    console.log(email);
+    const result = await db.query(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
     return result.rows[0];
   }
 
