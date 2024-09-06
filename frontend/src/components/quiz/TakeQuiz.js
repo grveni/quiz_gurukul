@@ -6,14 +6,15 @@ import {
   submitQuizAnswers,
 } from '../../utils/QuizAPI';
 import { useNavigate } from 'react-router-dom';
+import './css/TakeQuiz.css'; // Import the new CSS file
 
 const TakeQuiz = () => {
-  const { quizId } = useParams(); // Ensure useParams is imported and used correctly
+  const { quizId } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [noNewQuiz, setNoNewQuiz] = useState(false); // New state for no quiz scenario
+  const [noNewQuiz, setNoNewQuiz] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,13 +22,10 @@ const TakeQuiz = () => {
       try {
         let quizData;
         if (quizId) {
-          console.log(`Fetching quiz with ID: ${quizId}`);
           quizData = await getQuizById(quizId);
         } else {
-          console.log('Fetching next untaken quiz');
           quizData = await getNextUntakenQuiz();
         }
-        console.log('Quiz Data:', quizData);
 
         if (
           !quizData ||
@@ -35,7 +33,7 @@ const TakeQuiz = () => {
           !quizData.quiz.questions ||
           quizData.quiz.questions.length === 0
         ) {
-          setNoNewQuiz(true); // Set noNewQuiz to true if no quiz is available
+          setNoNewQuiz(true);
         } else {
           const questionsWithOptions = quizData.quiz.questions.map(
             (question) => ({
@@ -58,7 +56,6 @@ const TakeQuiz = () => {
           );
         }
       } catch (err) {
-        console.error(err);
         setError('Failed to load quiz');
       }
     }
@@ -88,30 +85,26 @@ const TakeQuiz = () => {
     setMessage('');
     setError('');
     try {
-      console.log('Quiz submitted', quiz.id, answers);
       const result = await submitQuizAnswers(quiz.id, answers);
-      console.log('Quiz Result:', result);
-      const path = `/student/results/${quiz.id}`;
-      console.log('Navigating to:', path);
-      navigate(path);
+      navigate(`/student/results/${quiz.id}`);
     } catch (err) {
       setError('Failed to submit quiz');
     }
   };
 
   if (noNewQuiz || !quiz) {
-    // Check if no new quiz is available
     return (
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+      <div className="no-quiz-message">
         <p>No new quiz published.</p>
         <p>New quizzes will be published soon.</p>
         <p>Please come back again later.</p>
       </div>
     );
   }
+
   return (
     <div className="take-quiz">
-      <h2>{quiz.title}</h2>
+      <h4>{quiz.title}</h4>
       <form onSubmit={handleSubmit}>
         {Array.isArray(quiz.questions) &&
           quiz.questions.map((question, index) => (
@@ -183,8 +176,8 @@ const TakeQuiz = () => {
           ))}
         <button type="submit">Submit Quiz</button>
       </form>
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {message && <p className="success-message">{message}</p>}
+      {error && <p className="error-message">{error}</p>}
     </div>
   );
 };

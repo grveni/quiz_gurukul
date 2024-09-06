@@ -1,0 +1,78 @@
+/* Styling for question block */
+.question-block h3 {
+  font-weight: normal !important; /* Ensure question text is not bold */
+  font-size: 18px; /* Default font size for larger screens */
+  margin-bottom: 10px;
+}
+
+/* Responsive font size for question text */
+@media only screen and (max-width: 768px) {
+  .question-block h3 {
+    font-size: 16px !important; /* Slightly smaller on tablets */
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .question-block h3 {
+    font-size: 16px !important; /* Smallest on mobile screens */
+  }
+}
+
+/* Align radio buttons and text on the same line */
+.question-block input[type='radio'] {
+  margin-right: 8px; /* Space between radio button and text */
+}
+
+.question-block label {
+  font-weight: normal !important; /* Ensure option text is not bold */
+  font-size: 16px !important; /* Default option font size */
+  display: inline-block; /* Ensure label and input are inline */
+  vertical-align: middle; /* Align text vertically with radio button */
+  word-wrap: break-word; /* Wrap long text to next line if needed */
+  max-width: calc(100% - 20px); /* Ensure long text wraps correctly */
+}
+
+/* Responsive font size for option text */
+@media only screen and (max-width: 768px) {
+  .question-block label {
+    font-size: 14px !important; /* Slightly smaller on tablets */
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .question-block label {
+    font-size: 12px !important; /* Smallest on mobile screens */
+  }
+}
+
+/* Ensure the text and button align properly */
+.question-block div {
+  margin-bottom: 8px; /* Spacing between options */
+}
+
+/* Styling for the no-quiz message */
+.no-quiz-message {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 18px;
+  color: #555;
+}
+
+/* Button styling */
+button {
+  font-size: 16px;
+  padding: 10px 20px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+/* Success and error messages */
+.success-message {
+  color: green;
+  margin-top: 10px;
+}
+
+.error-message {
+  color: red;
+  margin-top: 10px;
+}
