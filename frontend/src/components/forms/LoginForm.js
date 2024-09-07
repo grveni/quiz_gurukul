@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Import Link from react-router-dom
 import { login } from '../../utils/AuthAPI';
 
 const LoginForm = () => {
@@ -47,6 +47,11 @@ const LoginForm = () => {
       </div>
       <button onClick={handleLogin}>Login</button>
       {error && <p className="error-message">{error}</p>}
+      <div className="register-link">
+        <p>
+          New user? <Link to="/register">Register here</Link>
+        </p>
+      </div>
     </div>
   );
 };
