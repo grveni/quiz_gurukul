@@ -37,6 +37,17 @@ const QuizResults = () => {
       <h2>Quiz Results</h2>
       <p>Score: {results.score}</p>
       <p>Percentage: {results.percentScore}%</p>
+
+      {/* Move buttons above questions with space */}
+      <div className="actions">
+        <button onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}>
+          {showCorrectAnswers ? 'Hide Correct Answers' : 'Show Correct Answers'}
+        </button>
+        <button onClick={() => navigate(`/student/take-quiz/${quizId}`)}>
+          Retake Quiz
+        </button>
+      </div>
+
       {results.questions.map((question, index) => (
         <div
           key={question.id}
@@ -77,12 +88,6 @@ const QuizResults = () => {
           </ul>
         </div>
       ))}
-      <button onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}>
-        {showCorrectAnswers ? 'Hide Correct Answers' : 'Show Correct Answers'}
-      </button>
-      <button onClick={() => navigate(`/student/take-quiz/${quizId}`)}>
-        Retake Quiz
-      </button>
     </div>
   );
 };

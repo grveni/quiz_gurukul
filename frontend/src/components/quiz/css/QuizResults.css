@@ -44,3 +44,11 @@
   color: red;
   margin-left: 10px;
 }
+
+.quiz-results {
+  margin: 20px;
+}
+
+.actions {
+  margin-bottom: 20px; /* Add space between the buttons and the quiz questions */
+}
