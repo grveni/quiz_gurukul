@@ -7,29 +7,6 @@ import StudentDashboardPage from './pages/StudentDashboardPage';
 import { getUserRole } from './utils/AuthAPI';
 import './index.css'; // Assuming you have an App.css file for styles
 
-const Home = ({ setFormType }) => {
-  const navigate = useNavigate();
-
-  const handleRegister = () => {
-    setFormType('register');
-    navigate('/register');
-  };
-
-  const handleLogin = () => {
-    setFormType('login');
-    navigate('/login');
-  };
-
-  return (
-    <div className="home-container">
-      <div className="content">
-        <h2>Dummy Content</h2>
-        <p>This is some dummy content to fill the main body of the page.</p>
-      </div>
-    </div>
-  );
-};
-
 const App = () => {
   const [formType, setFormType] = useState(null);
   const [role, setRole] = useState(null);
@@ -55,13 +32,14 @@ const App = () => {
   return (
     <div className="wrapper">
       <header className="header">
-        <button onClick={() => navigate('/')}>Home</button>
+        {/* Removed the Home button */}
         <button onClick={() => navigate('/register')}>Register</button>
         <button onClick={() => navigate('/login')}>Login</button>
       </header>
       <main className="content-wrapper">
         <Routes>
-          <Route path="/" element={<Home setFormType={setFormType} />} />
+          {/* Set default route ("/") to login */}
+          <Route path="/" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/admin/*" element={<AdminDashboardPage />} />
