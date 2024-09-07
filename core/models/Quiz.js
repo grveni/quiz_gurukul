@@ -118,6 +118,16 @@ class Quiz extends Model {
   }
 
   /**
+   * Get user's last attempt answers for a quiz
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Number} userId - The ID of the user
+   * @returns {Array} - List of user's previous answers (if any)
+   */
+  async getLastAttemptByUser(quizId, userId) {
+    return this.queryClass.getLastAttemptByUser(quizId, userId);
+  }
+
+  /**
    * Get all quizzes
    * @returns {Array} - The list of quizzes
    */

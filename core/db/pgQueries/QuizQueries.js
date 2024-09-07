@@ -179,6 +179,59 @@ class QuizQueries extends Query {
   }
 
   /**
+   * Fetch user's last attempt answers for a given quiz
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Number} userId - The ID of the user
+   * @returns {Array} - List of user's previous answers
+   */
+  async getLastAttemptByUser(quizId, userId) {
+    try {
+      console.log(
+        `Fetching last attempt for quizId: ${quizId}, userId: ${userId}`
+      );
+
+      const result = await db.query(
+        `
+        WITH latest_attempt AS (
+          SELECT 
+            id 
+          FROM 
+            quiz_attempts 
+          WHERE 
+            quiz_id = $1 AND user_id = $2 
+          ORDER BY 
+            attempt_date DESC 
+          LIMIT 1
+        )
+        SELECT 
+          r.question_id, 
+          r.response_text 
+        FROM 
+          responses r
+        INNER JOIN 
+          latest_attempt la
+        ON 
+          r.attempt_id = la.id
+        `,
+        [quizId, userId]
+      );
+      console.log('Fetched user responses:', result.rows);
+
+      if (result.rowCount === 0) {
+        console.log(
+          `No attempt found for quizId: ${quizId}, userId: ${userId}`
+        );
+        return null;
+      }
+
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching user attempt:', error);
+      throw new Error('Failed to fetch user attempt');
+    }
+  }
+
+  /**
    * Delete a question by ID
    * @param {Number} questionId - The ID of the question
    * @returns {Object} - The deleted question

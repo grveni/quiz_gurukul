@@ -528,14 +528,77 @@ class QuizController extends Controller {
 
   async getQuizForTaking(req, res) {
     const { quizId } = req.params;
-    try {
-      const quiz = await Quiz.getQuizById(quizId);
-      const qns = await Quiz.listAllQuestions(quizId);
-      console.log(qns.map((qns) => qns.id));
+    const userId = req.user.id; // Assuming the user is authenticated and req.user.id provides the user ID
 
-      quiz.questions = qns;
+    try {
+      console.log(`Fetching quiz for userId: ${userId} and quizId: ${quizId}`);
+
+      // Fetch quiz and questions
+      const quiz = await Quiz.getQuizById(quizId);
+      console.log('Fetched Quiz:', quiz);
+
+      const questions = await Quiz.listAllQuestions(quizId);
+      console.log('Fetched Questions with Options:', questions);
+
+      // Fetch user's previous attempt responses if they exist
+      const lastAttempt = await Quiz.getLastAttemptByUser(quizId, userId);
+      console.log('Fetched Last Attempt by User:', lastAttempt);
+
+      // Attach the questions and previous answers (if any) to the quiz
+      quiz.questions = questions;
+
+      if (lastAttempt && lastAttempt.length > 0) {
+        // Attach user's previous answers to the quiz questions
+        quiz.questions.forEach((question) => {
+          const previousAnswer = lastAttempt.find(
+            (answer) => answer.question_id === question.id
+          );
+
+          if (previousAnswer) {
+            if (
+              question.question_type === 'multiple-choice' ||
+              question.question_type === 'true-false'
+            ) {
+              // Compare response_text with each option_text to find the selected option
+              const selectedOption = question.options.find(
+                (option) => option.option_text === previousAnswer.response_text
+              );
+
+              console.log(
+                `For Question ID ${question.id}, matching response_text with option_text`
+              );
+
+              question.previous_answer = {
+                selected_option_id: selectedOption?.id || null, // Log if option found
+                response_text: previousAnswer.response_text,
+              };
+              console.log(
+                `Matched option for question ID ${question.id}:`,
+                selectedOption
+              );
+            } else if (question.question_type === 'text') {
+              // For text-based questions, just use the response_text directly
+              question.previous_answer = {
+                selected_option_id: null,
+                response_text: previousAnswer.response_text,
+              };
+              console.log(
+                `Text response for question ID ${question.id}:`,
+                previousAnswer.response_text
+              );
+            }
+          } else {
+            question.previous_answer = null; // No previous answer for this question
+            console.log(
+              `No previous answer found for question ID ${question.id}`
+            );
+          }
+        });
+      }
+
       res.status(200).json({ quiz });
     } catch (error) {
+      console.error('Error fetching quiz:', error);
       res.status(500).json({ error: error.message });
     }
   }

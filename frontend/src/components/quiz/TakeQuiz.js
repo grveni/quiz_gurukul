@@ -27,6 +27,9 @@ const TakeQuiz = () => {
           quizData = await getNextUntakenQuiz();
         }
 
+        // Log the received quiz data
+        console.log('Received Quiz Data:', quizData);
+
         if (
           !quizData ||
           !quizData.quiz ||
@@ -42,20 +45,32 @@ const TakeQuiz = () => {
             })
           );
 
+          // Log what we are trying to extract
+          console.log('Extracted Questions and Options:', questionsWithOptions);
+
           setQuiz({
             ...quizData.quiz,
             questions: questionsWithOptions,
           });
 
-          setAnswers(
-            questionsWithOptions.map((question) => ({
-              questionId: question.id,
-              selectedOption: '',
-              answerText: '',
-            }))
-          );
+          // Set initial answers, either from previous answers or empty
+          const initialAnswers = questionsWithOptions.map((question) => ({
+            questionId: question.id,
+            selectedOption: question.previous_answer
+              ? question.previous_answer.selected_option_id
+              : '', // Use previous answer or empty
+            answerText: question.previous_answer
+              ? question.previous_answer.response_text
+              : '', // For text-based questions, use previous answer or empty
+          }));
+
+          // Log the initial answers (populated from previous answers)
+          console.log('Initial Answers State:', initialAnswers);
+
+          setAnswers(initialAnswers);
         }
       } catch (err) {
+        console.error('Error fetching quiz:', err);
         setError('Failed to load quiz');
       }
     }
@@ -68,6 +83,12 @@ const TakeQuiz = () => {
         ? { ...answer, selectedOption: optionId, answerText: optionText }
         : answer
     );
+
+    // Log when an option is changed
+    console.log(
+      `Option Changed: Question ID: ${questionId}, Selected Option ID: ${optionId}`
+    );
+
     setAnswers(updatedAnswers);
   };
 
@@ -77,6 +98,12 @@ const TakeQuiz = () => {
         ? { ...answer, selectedOption: '', answerText: text }
         : answer
     );
+
+    // Log when an answer text is changed
+    console.log(
+      `Answer Text Changed: Question ID: ${questionId}, Text: ${text}`
+    );
+
     setAnswers(updatedAnswers);
   };
 
@@ -85,9 +112,17 @@ const TakeQuiz = () => {
     setMessage('');
     setError('');
     try {
+      // Log the answers that are being submitted
+      console.log('Submitting Answers:', answers);
+
       const result = await submitQuizAnswers(quiz.id, answers);
+
+      // Log the result from the submission
+      console.log('Submission Result:', result);
+
       navigate(`/student/results/${quiz.id}`);
     } catch (err) {
+      console.error('Error submitting quiz:', err);
       setError('Failed to submit quiz');
     }
   };
