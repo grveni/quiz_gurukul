@@ -11,6 +11,8 @@ const RegisterForm = () => {
   const [globalErrors, setGlobalErrors] = useState([]);
   const [success, setSuccess] = useState('');
   const [userDetails, setUserDetails] = useState(null);
+  const [confirmPassword, setConfirmPassword] = useState(''); // New state for confirm password
+  const [passwordMismatchError, setPasswordMismatchError] = useState(''); // Password mismatch error
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,6 +66,13 @@ const RegisterForm = () => {
     setFieldErrors({});
     setGlobalErrors([]);
     setSuccess('');
+    setPasswordMismatchError('');
+
+    // Check if password and confirm password match
+    if (formData.password !== confirmPassword) {
+      setPasswordMismatchError('Passwords do not match');
+      return;
+    }
 
     const dataToSubmit = {
       ...formData,
@@ -124,6 +133,26 @@ const RegisterForm = () => {
         {fieldErrors[name] && (
           <p className="error-message">{fieldErrors[name]}</p>
         )}
+
+        {/* Dynamically add confirm password field if the current field is password */}
+        {name === 'password' && (
+          <>
+            <div className="form-field">
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            {/* Display mismatch error directly below the confirm password field */}
+            {passwordMismatchError && (
+              <p className="error-message">{passwordMismatchError}</p>
+            )}
+          </>
+        )}
       </div>
     );
   };
@@ -133,6 +162,7 @@ const RegisterForm = () => {
       <h1>Register</h1>
       <form onSubmit={handleSubmit}>
         {formFields.map(renderInputField)}
+
         <div className="form-field">
           <select value={selectedRole} onChange={handleRoleChange} required>
             <option value="">Select Role</option>

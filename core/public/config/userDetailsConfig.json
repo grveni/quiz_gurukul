@@ -29,20 +29,6 @@
         }
       }
     },
-    "phone": {
-      "db": {
-        "type": "VARCHAR(20)",
-        "constraints": "NULL"
-      },
-      "form": {
-        "type": "text",
-        "placeholder": "Mobile",
-        "validations": {
-          "required": false,
-          "pattern": "^\\+?[0-9]{10,15}$"
-        }
-      }
-    },
     "password": {
       "db": {
         "type": "VARCHAR(255)",
@@ -57,6 +43,21 @@
         }
       }
     },
+    "phone": {
+      "db": {
+        "type": "VARCHAR(20)",
+        "constraints": "NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Mobile",
+        "validations": {
+          "required": false,
+          "pattern": "^\\+?[0-9]{10,15}$"
+        }
+      }
+    },
+
     "flat_no": {
       "db": {
         "type": "VARCHAR(50)",
