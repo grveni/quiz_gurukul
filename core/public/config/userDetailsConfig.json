@@ -7,7 +7,7 @@
       },
       "form": {
         "type": "text",
-        "placeholder": "Username",
+        "placeholder": "User Name",
         "validations": {
           "required": true,
           "minLength": 3,
@@ -22,7 +22,7 @@
       },
       "form": {
         "type": "email",
-        "placeholder": "Email",
+        "placeholder": "Login Email Id",
         "validations": {
           "required": true,
           "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
@@ -103,7 +103,7 @@
       },
       "form": {
         "type": "text",
-        "placeholder": "Parent Name",
+        "placeholder": "Father's and Mother's Name",
         "validations": {
           "required": true,
           "minLength": 3,
@@ -118,7 +118,7 @@
       },
       "form": {
         "type": "text",
-        "placeholder": "Standard",
+        "placeholder": "Class",
         "validations": {
           "required": true,
           "pattern": "^[1-9][0-9]*$"
