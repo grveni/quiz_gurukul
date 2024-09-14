@@ -1,6 +1,7 @@
 const express = require('express');
 const authRoutes = require('./routes/AuthRoutes');
 const quizRoutes = require('./routes/QuizRoutes');
+const userRoutes = require('./routes/UserRoutes');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -48,12 +49,14 @@ app.use('/api/auth/login', limiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
+// Register user routes
+app.use('/api/users', userRoutes);
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Route to check and serve the JSON file
 app.get('/api/config/userDetailsConfig.json', (req, res) => {
-  console.log('did not get here');
+  console.log('Fetch config');
   const filePath = path.join(
     __dirname,
     'public/config',

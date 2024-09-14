@@ -285,11 +285,11 @@ class QuizQueries extends Query {
   }
 
   /**
-   * Submit quiz answers and calculate score
+   * Submit quiz answers and calculate score and percentage
    * @param {Number} studentId - The ID of the student
    * @param {Number} quizId - The ID of the quiz
    * @param {Array} answers - The list of answers
-   * @returns {Object} - The quiz attempt result including score
+   * @returns {Object} - The quiz attempt result including score and percentage
    */
 
   async submitQuiz(studentId, quizId, answers) {
@@ -298,10 +298,19 @@ class QuizQueries extends Query {
     try {
       await client.query('BEGIN');
 
-      // Create quiz attempt
+      // Get total number of questions for the quiz
+      const totalQuestionsResult = await client.query(
+        `SELECT COUNT(*) as total_questions FROM questions WHERE quiz_id = $1`,
+        [quizId]
+      );
+      const totalQuestions = parseInt(
+        totalQuestionsResult.rows[0].total_questions
+      );
+
+      // Create quiz attempt with initial score set to 0
       const quizAttemptResult = await client.query(
-        `INSERT INTO quiz_attempts (user_id, quiz_id, score) VALUES ($1, $2, $3) RETURNING *`,
-        [studentId, quizId, 0]
+        `INSERT INTO quiz_attempts (user_id, quiz_id, score, percentage) VALUES ($1, $2, $3, $4) RETURNING *`,
+        [studentId, quizId, 0, 0]
       );
       const quizAttemptId = quizAttemptResult.rows[0].id;
 
@@ -330,15 +339,23 @@ class QuizQueries extends Query {
         );
       }
 
-      // Update quiz attempt with score
-      await client.query(`UPDATE quiz_attempts SET score = $1 WHERE id = $2`, [
-        score,
-        quizAttemptId,
-      ]);
+      // Calculate percentage based on score and total number of questions
+      const percentage = (score / totalQuestions) * 100;
+
+      // Update quiz attempt with score and percentage
+      await client.query(
+        `UPDATE quiz_attempts SET score = $1, percentage = $2 WHERE id = $3`,
+        [score, percentage, quizAttemptId]
+      );
 
       await client.query('COMMIT');
-      console.log('returning score', score, quizAttemptId);
-      return { quizAttemptId, score };
+      console.log(
+        'Returning score and percentage',
+        score,
+        percentage,
+        quizAttemptId
+      );
+      return { quizAttemptId, score, percentage };
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error during quiz submission:', error);
@@ -362,6 +379,63 @@ class QuizQueries extends Query {
     }
   }
 
+  // Helper 1: Fetch the latest quiz attempt
+  async getLatestQuizAttempt(userId, quizId) {
+    const query = `
+    SELECT 
+        id as attempt_id, 
+        score, 
+        percentage
+    FROM 
+        quiz_attempts
+    WHERE 
+        user_id = $1
+    AND 
+        quiz_id = $2
+    ORDER BY 
+        attempt_date DESC
+    LIMIT 1;
+  `;
+    const result = await db.query(query, [userId, quizId]);
+    if (result.rowCount === 0) {
+      console.error(
+        `No attempt found for user ID: ${userId} and quiz ID: ${quizId}`
+      );
+      return null;
+    }
+    return result.rows[0]; // Return the latest attempt
+  }
+
+  // Helper 2: Fetch responses for the given quiz attempt
+  async getResponsesForAttempt(attemptId) {
+    const query = `
+    SELECT 
+        q.id as question_id,
+        q.question_text,
+        q.question_type,
+        o.id as option_id,
+        o.option_text,
+        o.is_correct,
+        r.response_text as user_response,
+        r.is_correct as response_correct
+    FROM 
+        responses r
+    INNER JOIN 
+        questions q ON r.question_id = q.id
+    LEFT JOIN 
+        options o ON q.id = o.question_id
+    WHERE 
+        r.attempt_id = $1
+    ORDER BY 
+        q.id, o.id;
+  `;
+    const result = await db.query(query, [attemptId]);
+    if (result.rowCount === 0) {
+      console.error(`No responses found for attempt ID: ${attemptId}`);
+      return null;
+    }
+    return result.rows; // Return all responses for the attempt
+  }
   /**
    * Fetch quiz results for a user based on the quiz ID and user ID
    * @param {Number} userId - The ID of the user
@@ -370,72 +444,30 @@ class QuizQueries extends Query {
    */
   async getQuizResultsForUser(userId, quizId) {
     try {
-      const query = `
-      SELECT 
-          qa.id as attempt_id,
-          qa.score,
-          q.id as question_id,
-          q.question_text,
-          q.question_type,
-          o.id as option_id,
-          o.option_text,
-          o.is_correct,
-          r.response_text as user_response,
-          r.is_correct as response_correct
-      FROM 
-          quiz_attempts qa
-      INNER JOIN 
-          responses r 
-      ON 
-          qa.id = r.attempt_id
-      INNER JOIN 
-          questions q 
-      ON 
-          r.question_id = q.id
-      LEFT JOIN 
-          options o 
-      ON 
-          q.id = o.question_id 
-      WHERE 
-          qa.user_id = $1 
-      AND 
-          qa.quiz_id = $2
-      AND 
-          qa.id = (
-              SELECT 
-                  MAX(id) 
-              FROM 
-                  quiz_attempts 
-              WHERE 
-                  user_id = $1 
-              AND 
-                  quiz_id = $2
-          )
-      ORDER BY 
-          q.id, o.id
-      `;
-
-      const results = await db.query(query, [userId, quizId]);
-
-      if (results.rowCount === 0) {
-        console.error(
-          `No results found for user ID: ${userId} and quiz ID: ${quizId}`
-        );
-        return null;
+      // Get the latest quiz attempt
+      const latestAttempt = await this.getLatestQuizAttempt(userId, quizId);
+      if (!latestAttempt) {
+        return null; // No attempt found
       }
 
-      const questionsMap = new Map();
-      let score = 0;
+      const { attempt_id, score, percentage } = latestAttempt; // Destructure attempt_id and score
 
-      results.rows.forEach((row) => {
+      // Get responses for the quiz attempt
+      const responses = await this.getResponsesForAttempt(attempt_id);
+      if (!responses) {
+        return null; // No responses found
+      }
+
+      // Build the question map with options and responses
+      const questionsMap = new Map();
+
+      responses.forEach((row) => {
         const questionId = row.question_id;
         if (!questionsMap.has(questionId)) {
           questionsMap.set(questionId, {
             id: questionId,
             question_text: row.question_text,
             question_type: row.question_type,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
             options: [],
             user_response: row.user_response,
             response_correct: row.response_correct,
@@ -449,16 +481,17 @@ class QuizQueries extends Query {
             is_correct: row.is_correct,
           });
         }
-
-        score = row.score; // Assuming score is the same for all rows
       });
 
+      // Convert the map back to an array
       const questions = Array.from(questionsMap.values());
 
-      console.log('Final Questions:', questions);
-      console.log('Score:', score);
-
-      return { questions, score };
+      // Return the final results structure with the same format as before
+      return {
+        questions,
+        score,
+        percentage,
+      };
     } catch (error) {
       console.error('Error fetching quiz results:', error);
       throw new Error('Failed to fetch quiz results');
@@ -773,6 +806,74 @@ class QuizQueries extends Query {
     } finally {
       client.release(); // Release the client back to the pool
     }
+  }
+
+  // Get detailed responses for a quiz
+  async getDetailedQuizResponses(quizId) {
+    const query = `
+    SELECT 
+      q.question_text, 
+      r.response_text AS user_response, 
+      r.is_correct, 
+      o.option_text AS correct_answer, 
+      u.username
+    FROM 
+      responses r
+    INNER JOIN 
+      quiz_attempts a ON r.attempt_id = a.id
+    INNER JOIN 
+      questions q ON r.question_id = q.id
+    INNER JOIN 
+      options o ON q.id = o.question_id AND o.is_correct = true
+    INNER JOIN 
+      users u ON a.user_id = u.id
+    WHERE 
+      a.quiz_id = $1
+    AND 
+      a.attempt_date = (
+        SELECT MAX(attempt_date)
+        FROM quiz_attempts
+        WHERE quiz_id = $1
+        AND user_id = a.user_id
+      )
+  `;
+    const result = await db.query(query, [quizId]);
+    console.log('Quiz Responses Fetched:', result.rows); // Debug log
+    return result.rows;
+  }
+
+  // Get detailed responses for a user
+  async getDetailedUserResponses(userId) {
+    const query = `
+    SELECT 
+      q.question_text, 
+      r.response_text AS user_response, 
+      r.is_correct, 
+      o.option_text AS correct_answer, 
+      qu.title AS quiz_title
+    FROM 
+      responses r
+    INNER JOIN 
+      quiz_attempts a ON r.attempt_id = a.id
+    INNER JOIN 
+      questions q ON r.question_id = q.id
+    INNER JOIN 
+      options o ON q.id = o.question_id AND o.is_correct = true
+    INNER JOIN 
+      quizzes qu ON a.quiz_id = qu.id
+    WHERE 
+      a.user_id = $1
+    AND 
+      a.attempt_date = (
+        SELECT MAX(attempt_date)
+        FROM quiz_attempts
+        WHERE user_id = $1
+        AND quiz_id = a.quiz_id
+      )
+  `;
+    const result = await db.query(query, [userId]);
+    console.log('User Responses Fetched:', result.rows); // Debug log
+    return result.rows;
   }
 }
 

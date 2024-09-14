@@ -176,6 +176,24 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.updateQuizStatus(req, res)
     );
 
+    // Route to get quiz responses for a specific quiz
+    this.router.get(
+      '/:quizId/responses',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+      (req, res, next) =>
+        AuthMiddleware.authorizeRoles('admin')(req, res, next),
+      (req, res) => this.controller.getQuizResponses(req, res)
+    );
+
+    // Route to get quiz detailed responses for a specific quiz or specific user.
+    this.router.get(
+      '/detailed-responses',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+      (req, res, next) =>
+        AuthMiddleware.authorizeRoles('admin')(req, res, next),
+      (req, res) => this.controller.getDetailedQuizResponses(req, res)
+    );
+
     // Routes accessible to both admin and student
 
     // Route to get a particular quiz by ID

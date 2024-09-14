@@ -84,6 +84,18 @@ class UserQueries extends Query {
     );
     return result.rows[0]?.role_name;
   }
+
+  async getAllUsernames() {
+    try {
+      const result = await db.query(
+        'SELECT id, username FROM users INNER JOIN user_roles AS rl ON users.id = rl.user_id WHERE rl.role_id = 4'
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching usernames:', error.message);
+      throw new Error('Failed to fetch usernames');
+    }
+  }
 }
 
 module.exports = new UserQueries();

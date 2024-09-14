@@ -10,6 +10,7 @@ import StudentReport from '../components/reports/StudentReport';
 import ConsolidatedReport from '../components/reports/ConsolidatedReport';
 import ManageUsers from '../components/users/ManageUsers';
 import AdminDashboard from '../components/dashboard/AdminDashboard';
+import ViewResponses from '../components/quiz/ViewResponsesAdmin';
 
 const AdminDashboardPage = () => (
   <Routes>
@@ -23,6 +24,7 @@ const AdminDashboardPage = () => (
       <Route path="consolidated-report" element={<ConsolidatedReport />} />
       <Route path="manage-users" element={<ManageUsers />} />
       <Route path="add-questions" element={<AddQuizQuestions />} />
+      <Route path="view-responses" element={<ViewResponses />} />
     </Route>
   </Routes>
 );

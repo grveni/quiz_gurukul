@@ -40,6 +40,15 @@ class User extends Model {
   async findUserRoleName(userId) {
     return this.queryClass.findUserRoleName(userId);
   }
+
+  async getAllUsernames() {
+    try {
+      return await this.queryClass.getAllUsernames();
+    } catch (err) {
+      console.error('Error in User.getAllUsernames:', err.message);
+      throw new Error('Error fetching usernames');
+    }
+  }
 }
 
 module.exports = new User();

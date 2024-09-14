@@ -1,0 +1,47 @@
+/* Style for the entire table */
+.detail-responses-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+/* Style for table headers */
+.detail-responses-table th,
+.detail-responses-table td {
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  text-align: center;
+  font-weight: normal; /* Ensure text is not bold */
+}
+
+/* Correct answer row */
+.correct-answer-row {
+  background-color: #f0f0f0;
+}
+
+/* Correct answer cells */
+.correct-answer-cell {
+  background-color: #dff0d8;
+}
+
+/* Correct user response */
+.correct {
+  background-color: #d4edda;
+}
+
+/* Incorrect user response */
+.incorrect {
+  background-color: #f8d7da;
+}
+
+/* Table header row background */
+.detail-responses-table th {
+  background-color: #f8f9fa;
+  font-weight: normal; /* Ensure headers (questions) are not bold */
+}
+
+/* Regular cells */
+.detail-responses-table td {
+  padding: 12px;
+  font-weight: normal; /* Ensure all text is not bold */
+}

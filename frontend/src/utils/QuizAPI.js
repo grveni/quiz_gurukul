@@ -373,3 +373,55 @@ export const getQuizById = async (quizId) => {
     console.error('Error fetching quiz details:', error);
   }
 };
+
+// Simulate fetching quiz responses
+export const getQuizResponses = async (quizId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/${quizId}/responses`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data.responses;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || 'Failed to fetch quiz responses'
+    );
+  }
+};
+
+// Simulate fetching user responses
+export const fetchUserResponses = async (userId) => {
+  return [
+    { quizId: '1', quizTitle: 'Math Quiz', score: 80, percentage: 80 },
+    { quizId: '2', quizTitle: 'Science Quiz', score: 75, percentage: 75 },
+  ];
+};
+
+/**
+ * Fetch detailed quiz or user responses from the backend
+ * @param {Object} params - Contains quizId, userId, and type (quiz/user)
+ * @returns {Array} - Detailed responses
+ */
+export const getDetailedQuizResponses = async ({ quizId, userId, type }) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/detailed-responses`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        quizId,
+        userId,
+        type,
+      },
+    });
+    console.log('Detailed responses received:', response.data); // Debug log
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching detailed quiz responses:', error);
+    throw new Error('Failed to fetch detailed responses');
+  }
+};

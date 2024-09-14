@@ -1,4 +1,5 @@
 const Quiz = require('../models/Quiz');
+const User = require('../models/User');
 const Controller = require('./Controller');
 const { body, validationResult } = require('express-validator');
 
@@ -453,14 +454,10 @@ class QuizController extends Controller {
         return res.status(404).json({ message: 'Quiz results not found' });
       }
       const totalQuestions = quizResults.questions.length;
-      const percentageScore = (
-        (quizResults.score / totalQuestions) *
-        100
-      ).toFixed(1);
 
       res.status(200).json({
         score: quizResults.score,
-        percentScore: percentageScore,
+        percentScore: quizResults.percentage,
         questions: quizResults.questions,
       });
     } catch (error) {
@@ -600,6 +597,142 @@ class QuizController extends Controller {
     } catch (error) {
       console.error('Error fetching quiz:', error);
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Fetch quiz responses (score and percentage) for each user who attempted the quiz
+   * @param {Object} req - The request object containing quizId
+   * @param {Object} res - The response object to send data
+   */
+  async getQuizResponses(req, res) {
+    try {
+      const { quizId } = req.params;
+      console.log(quizId);
+      // Fetch all users (students)
+      const users = await User.getAllUsernames();
+
+      const responses = [];
+
+      for (const user of users) {
+        // Fetch the latest attempt for each user for this quiz
+        const latestAttempt = await Quiz.getLatestQuizAttempt(user.id, quizId);
+
+        if (latestAttempt) {
+          // If there is an attempt, push the score and percentage
+          responses.push({
+            userId: user.id,
+            username: user.username,
+            score: latestAttempt.score,
+            percentage: latestAttempt.percentage,
+          });
+        }
+      }
+      console.log(responses);
+      res.status(200).json({
+        quizId,
+        responses,
+      });
+    } catch (error) {
+      console.error('Error fetching quiz responses:', error);
+      res.status(500).json({ message: 'Failed to fetch quiz responses' });
+    }
+  }
+  formatUserResponses(responses) {
+    const formatted = responses.reduce((acc, curr) => {
+      const existingQuiz = acc.find(
+        (item) => item.quizTitle === curr.quiz_title
+      );
+
+      const responseData = {
+        questionId: curr.question_id, // if you have it, otherwise remove it
+        questionText: curr.question_text,
+        correctAnswer: curr.correct_answer,
+        userResponse: curr.user_response,
+        isCorrect: curr.is_correct,
+      };
+
+      if (existingQuiz) {
+        existingQuiz.quizResponses.push(responseData);
+      } else {
+        acc.push({
+          quizTitle: curr.quiz_title,
+          quizResponses: [responseData],
+        });
+      }
+
+      return acc;
+    }, []);
+
+    return formatted;
+  }
+  formatQuizResponses(responses) {
+    console.log('Received responses for formatting:', responses);
+
+    const formatted = responses.reduce((acc, curr) => {
+      const existingUser = acc.find((item) => item.username === curr.username);
+
+      // Log each response data before formatting
+      console.log('Current response data:', curr);
+
+      const responseData = {
+        questionText: curr.question_text,
+        correctAnswer: curr.correct_answer,
+        userResponse: curr.user_response,
+        isCorrect: curr.is_correct,
+      };
+
+      if (existingUser) {
+        existingUser.quizResponses.push(responseData);
+      } else {
+        acc.push({
+          username: curr.username,
+          quizResponses: [responseData],
+        });
+      }
+
+      return acc;
+    }, []);
+
+    // Log the final formatted structure
+    console.log('Formatted quiz responses:', formatted);
+
+    return formatted;
+  }
+
+  // Method to get detailed quiz responses based on type (quiz or user)
+  async getDetailedQuizResponses(req, res) {
+    try {
+      const { quizId, userId, type } = req.query;
+
+      console.log(
+        `Received request for detailed responses with quizId: ${quizId}, userId: ${userId}, type: ${type}`
+      ); // Debug log
+
+      // Fetch detailed quiz responses
+      const responses = await Quiz.getDetailedResponses({
+        quizId,
+        userId,
+        type,
+      });
+
+      console.log('Detailed quiz responses fetched:', responses); // Debug log
+
+      let formattedResponses;
+      if (type === 'quiz' && quizId) {
+        formattedResponses = this.formatQuizResponses(responses);
+      } else if (type === 'user' && userId) {
+        formattedResponses = this.formatUserResponses(responses);
+      } else {
+        return res
+          .status(400)
+          .json({ error: 'Invalid type or missing quizId/userId' });
+      }
+      console.log('Detailed quiz responses formatted:', formattedResponses); // Debug log
+      return res.status(200).json(formattedResponses);
+    } catch (error) {
+      console.error('Error fetching detailed responses:', error);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 }

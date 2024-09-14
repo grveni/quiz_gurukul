@@ -4,6 +4,17 @@ const User = require('../models/User');
 const Controller = require('./Controller');
 
 class UserController extends Controller {
+  async getAllUsers(req, res) {
+    try {
+      const users = await User.getAllUsernames();
+      console.log('Fetched Users:', users); // Debugging log
+      res.status(200).json({ users });
+    } catch (error) {
+      console.error('Error fetching users:', error.message); // Error log
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  }
+
   async getUser(req, res) {
     try {
       const user = await User.findById(req.params.id);

@@ -263,6 +263,32 @@ class Quiz extends Model {
   async getUserActiveQuizzes(userId) {
     return this.queryClass.getUserActiveQuizzes(userId);
   }
+
+  /**
+   * Fetch the latest quiz attempt for a user for a specific quiz
+   * @param {Number} userId - The ID of the user
+   * @param {Number} quizId - The ID of the quiz
+   * @returns {Object} - The latest quiz attempt with score and percentage
+   */
+  async getLatestQuizAttempt(userId, quizId) {
+    return this.queryClass.getLatestQuizAttempt(userId, quizId);
+  }
+
+  // Method to get detailed responses based on type (quiz or user)
+  async getDetailedResponses({ quizId, userId, type }) {
+    if (type === 'quiz') {
+      console.log(`Fetching detailed responses for quiz ID: ${quizId}`);
+      // Fetch detailed responses for a quiz
+      return await quizQueries.getDetailedQuizResponses(quizId);
+    } else if (type === 'user') {
+      console.log(`Fetching detailed responses for user ID: ${userId}`);
+      // Fetch detailed responses for a user
+      return await quizQueries.getDetailedUserResponses(userId);
+    } else {
+      console.error('Invalid type parameter');
+      throw new Error('Invalid type parameter');
+    }
+  }
 }
 
 module.exports = new Quiz();
