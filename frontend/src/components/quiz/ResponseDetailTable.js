@@ -13,51 +13,68 @@ const DetailTable = ({ responses, viewType, selectedQuizTitle }) => {
       <div>
         <h3>Detailed Responses for Quiz: {selectedQuizTitle}</h3>
 
-        <table className="detail-responses-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              {questions &&
-                questions.map((question, idx) => (
-                  <th
-                    key={idx}
-                    data-tooltip={question.questionText} // Tooltip with full question
-                  >
-                    {question.questionText.substring(0, 25)}...{' '}
-                    {/* Show first 25 characters */}
-                  </th>
-                ))}
-            </tr>
-          </thead>
-          <tbody>
-            {/* Correct Answer Row */}
-            <tr>
-              <td className="correct-answer-row">Correct Answer</td>
-              {questions &&
-                questions.map((question, idx) => (
-                  <td key={idx} className="correct-answer-cell">
-                    {question.correctAnswer}
-                  </td>
-                ))}
-            </tr>
-
-            {/* User Responses Rows */}
-            {responses.map((response, idx) => (
-              <tr key={idx}>
-                <td>{response.username}</td>
-                {response.quizResponses.map((resp, i) => (
-                  <td
-                    key={i}
-                    className={resp.isCorrect ? 'correct' : 'incorrect'}
-                    data-tooltip={resp.userResponse}
-                  >
-                    {resp.userResponse}
-                  </td>
-                ))}
+        <div className="detail-responses-table-wrapper">
+          <table className="detail-responses-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                {questions &&
+                  questions.slice(0, 6).map(
+                    (
+                      question,
+                      idx // Limit to show 6 questions initially
+                    ) => (
+                      <th
+                        key={idx}
+                        data-tooltip={question.questionText} // Tooltip with full question
+                      >
+                        {question.questionText.substring(0, 30)}...{' '}
+                        {/* Show first 30 characters */}
+                      </th>
+                    )
+                  )}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {/* Correct Answer Row */}
+              <tr>
+                <td className="correct-answer-row">Correct Answer</td>
+                {questions &&
+                  questions.slice(0, 6).map(
+                    (
+                      question,
+                      idx // Limit to show 6 questions initially
+                    ) => (
+                      <td key={idx} className="correct-answer-cell">
+                        {question.correctAnswer}
+                      </td>
+                    )
+                  )}
+              </tr>
+
+              {/* User Responses Rows */}
+              {responses.map((response, idx) => (
+                <tr key={idx}>
+                  <td>{response.username}</td>
+                  {response.quizResponses.slice(0, 6).map(
+                    (
+                      resp,
+                      i // Limit to show 6 questions initially
+                    ) => (
+                      <td
+                        key={i}
+                        className={resp.isCorrect ? 'correct' : 'incorrect'}
+                        data-tooltip={resp.userResponse}
+                      >
+                        {resp.userResponse}
+                      </td>
+                    )
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }

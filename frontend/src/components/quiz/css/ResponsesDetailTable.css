@@ -1,7 +1,8 @@
 .detail-responses-table {
-  width: 100%;
+  width: auto; /* Remove fixed width */
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto; /* Adjust table layout to auto to allow scrolling */
+  overflow-x: auto; /* Enable horizontal scrolling */
 }
 
 .detail-responses-table th,
@@ -21,6 +22,7 @@
   max-height: 80px; /* Limit the header row height */
   height: auto;
   vertical-align: top;
+  font-weight: normal; /* Set header text to not bold */
 }
 
 .correct-answer-row {
@@ -61,7 +63,16 @@
 
 .detail-responses-table th,
 .detail-responses-table td {
-  max-width: 200px; /* Allow more words per line */
+  max-width: 150px; /* Allow more words per line in each cell */
+  min-width: 150px; /* Minimum width to keep cells uniform */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-responses-table-wrapper {
+  max-width: 100%; /* Keep table within the viewport */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  display: block;
 }
 
 .detail-responses-table th:hover::after {
