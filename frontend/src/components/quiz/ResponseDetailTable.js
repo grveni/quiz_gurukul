@@ -19,7 +19,13 @@ const DetailTable = ({ responses, viewType, selectedQuizTitle }) => {
               <th>User</th>
               {questions &&
                 questions.map((question, idx) => (
-                  <th key={idx}>{question.questionText}</th>
+                  <th
+                    key={idx}
+                    data-tooltip={question.questionText} // Tooltip with full question
+                  >
+                    {question.questionText.substring(0, 25)}...{' '}
+                    {/* Show first 25 characters */}
+                  </th>
                 ))}
             </tr>
           </thead>
@@ -43,6 +49,7 @@ const DetailTable = ({ responses, viewType, selectedQuizTitle }) => {
                   <td
                     key={i}
                     className={resp.isCorrect ? 'correct' : 'incorrect'}
+                    data-tooltip={resp.userResponse}
                   >
                     {resp.userResponse}
                   </td>
