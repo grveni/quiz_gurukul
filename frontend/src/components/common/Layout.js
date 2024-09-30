@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import {
   List,
@@ -21,10 +21,14 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../utils/AuthAPI';
+import { getUserId } from '../../utils/UserAPI';
+
+const TEST_USER_ID = Number('10'); // Replace with the actual test user ID
 
 const Layout = ({ role }) => {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false); // State to handle drawer toggle for mobile/tablet view
+  const [isTestUser, setIsTestUser] = useState(false); // State to check if current user is a test user
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Breakpoint for mobile
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md')); // Breakpoint for tablet/iPad
@@ -33,6 +37,22 @@ const Layout = ({ role }) => {
     logout();
     navigate('/login');
   };
+
+  useEffect(() => {
+    // Fetch user profile and check if the user is the test user
+    const fetchUserProfile = async () => {
+      try {
+        const userId = await getUserId();
+        if (userId === TEST_USER_ID) {
+          console.log('test user');
+          setIsTestUser(true);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    fetchUserProfile();
+  }, []);
 
   const commonLinks = [
     { text: 'Quizzes', icon: <QuizIcon />, path: `/${role}/quizzes` },
@@ -66,6 +86,15 @@ const Layout = ({ role }) => {
       path: '/parent/manage-profile',
     },
   ];
+
+  // Conditionally add the "All Quizzes" link for the test user
+  if (isTestUser) {
+    studentLinks.push({
+      text: 'All Quizzes',
+      icon: <QuizIcon />,
+      path: '/student/all-quizzes',
+    });
+  }
 
   const links =
     role === 'admin'

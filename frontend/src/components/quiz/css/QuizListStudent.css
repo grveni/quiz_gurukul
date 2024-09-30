@@ -1,0 +1,100 @@
+/* Wrap text in table cells */
+.table-cell-wrap {
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  position: relative;
+}
+
+/* Tooltip for showing full title on hover */
+.table-cell-wrap:hover::after {
+  content: attr(data-full-title);
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+/* General error message styling */
+.error-message {
+  color: red;
+  margin: 10px 0;
+  text-align: center;
+}
+
+/* Styles for action buttons (archive, show all) */
+.actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Higher specificity for wrapping tabs labels on smaller devices */
+.MuiTab-root.tabs-label {
+  text-transform: none; /* Disable all-caps for all devices */
+  font-size: 16px; /* Default font size for larger screens */
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Smaller font for smaller devices */
+@media only screen and (max-width: 768px) {
+  .MuiTab-root.tabs-label {
+    font-size: 14px;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .MuiTab-root.tabs-label {
+    font-size: 12px;
+  }
+}
+
+/* Button for viewing results */
+.MuiButton-root.view-results-button {
+  font-size: 12px;
+  padding: 5px 10px;
+  text-transform: none;
+}
+
+/* Smaller button sizes for mobile screens */
+@media only screen and (max-width: 768px) {
+  .MuiButton-root.view-results-button {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .MuiButton-root.show-all-button {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .MuiButton-root.view-results-button {
+    font-size: 8px;
+    padding: 3px 6px;
+  }
+
+  .MuiButton-root.show-all-button {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
+
+/* Show All button without all-caps */
+.MuiButton-root.show-all-button {
+  text-transform: none;
+  font-size: 14px;
+  padding: 8px 16px;
+}

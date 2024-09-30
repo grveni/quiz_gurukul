@@ -875,6 +875,17 @@ class QuizQueries extends Query {
     console.log('User Responses Fetched:', result.rows); // Debug log
     return result.rows;
   }
+
+  async getUnattemptedQuizzes(userId) {
+    const query = `
+      SELECT q.* 
+      FROM quizzes q
+      LEFT JOIN quiz_attempts qa ON q.id = qa.quiz_id AND qa.user_id = $1
+      WHERE q.is_active = true AND qa.id IS NULL;
+    `;
+    const result = await db.query(query, [userId]);
+    return result.rows;
+  }
 }
 
 module.exports = new QuizQueries();

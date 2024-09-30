@@ -245,6 +245,12 @@ class QuizRoutes extends Route {
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
       (req, res) => this.controller.getStudentQuizzes(req, res)
     );
+
+    this.router.get(
+      '/student/new-quizzes',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+      (req, res) => QuizController.getStudentNewQuizzes(req, res)
+    );
   }
 }
 

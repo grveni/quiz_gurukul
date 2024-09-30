@@ -735,6 +735,17 @@ class QuizController extends Controller {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
+  async getStudentNewQuizzes(req, res) {
+    try {
+      const userId = req.user.id; // Extract the user ID from the token
+      const newQuizzes = await Quiz.getUnattemptedQuizzes(userId);
+      console.log(newQuizzes);
+      return res.status(200).json({ quizzes: newQuizzes });
+    } catch (error) {
+      console.error('Error fetching new quizzes:', error);
+      return res.status(500).json({ error: 'Failed to fetch new quizzes' });
+    }
+  }
 }
 
 module.exports = new QuizController();

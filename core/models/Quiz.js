@@ -289,6 +289,9 @@ class Quiz extends Model {
       throw new Error('Invalid type parameter');
     }
   }
+  async getUnattemptedQuizzes(userId) {
+    return this.queryClass.getUnattemptedQuizzes(userId);
+  }
 }
 
 module.exports = new Quiz();

@@ -425,3 +425,21 @@ export const getDetailedQuizResponses = async ({ quizId, userId, type }) => {
     throw new Error('Failed to fetch detailed responses');
   }
 };
+
+// Fetch new quizzes (unattempted quizzes)
+export const getNewQuizzes = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/student/new-quizzes`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.quizzes;
+  } catch (error) {
+    console.error('Error fetching new quizzes:', error);
+    throw new Error(
+      error.response?.data?.message || 'Failed to fetch new quizzes.'
+    );
+  }
+};

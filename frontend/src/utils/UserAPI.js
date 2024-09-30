@@ -94,3 +94,28 @@ export const getUsers = async () => {
     throw new Error(error.response?.data?.error || 'Failed to fetch users');
   }
 };
+
+// Fetch only the current user's ID
+export const getUserId = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No token found, please log in');
+    }
+
+    // Make a GET request to the new endpoint to fetch the user ID
+    const response = await axios.get(`${BASE_URL}/me/id`, {
+      headers: {
+        Authorization: `Bearer ${token}`, // Send the JWT token in the Authorization header
+      },
+    });
+    console.log('response id', response);
+    return response.data.id; // Return only the user ID
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Error fetching user ID');
+    }
+  }
+};
