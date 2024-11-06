@@ -7,7 +7,7 @@
       },
       "form": {
         "type": "text",
-        "placeholder": "User Name",
+        "placeholder": "Name",
         "validations": {
           "required": true,
           "minLength": 3,
@@ -104,7 +104,22 @@
       },
       "form": {
         "type": "text",
-        "placeholder": "Father's and Mother's Name",
+        "placeholder": "Father's Name",
+        "validations": {
+          "required": true,
+          "minLength": 3,
+          "maxLength": 255
+        }
+      }
+    },
+    "mother_name": {
+      "db": {
+        "type": "VARCHAR(255)",
+        "constraints": "NOT NULL"
+      },
+      "form": {
+        "type": "text",
+        "placeholder": "Mother's Name",
         "validations": {
           "required": true,
           "minLength": 3,
