@@ -52,7 +52,17 @@ class Quiz extends Model {
    * @returns {Array} - The added questions
    */
   async addQuestions(quizId, questions) {
-    return this.queryClass.addQuestions(quizId, questions);
+    try {
+      // Call the query class method to add questions
+      const addedQuestions = await this.queryClass.addQuestions(
+        quizId,
+        questions
+      );
+      return addedQuestions;
+    } catch (error) {
+      console.error('Error in QuizModel.addQuestions:', error);
+      throw new Error('Failed to add questions to the quiz');
+    }
   }
 
   /**

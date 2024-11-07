@@ -79,34 +79,86 @@ class QuizQueries extends Query {
    * @param {Array} questions - The questions to add
    * @returns {Array} - The added questions
    */
-  async addQuestions(quizId, questions) {
-    const results = [];
-    for (const question of questions) {
-      const result = await db.query(
-        'INSERT INTO questions (quiz_id, question_text, question_type) VALUES ($1, $2, $3) RETURNING *',
-        [quizId, question.question_text, question.question_type]
-      );
-      const questionId = result.rows[0].id;
+  // QuizQueries.js
 
-      if (
-        question.question_type === 'multiple-choice' ||
-        question.question_type === 'true-false'
-      ) {
-        for (const option of question.options) {
-          await db.query(
-            'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
-            [questionId, option.option_text, option.is_correct]
+  async addQuestions(quizId, questions) {
+    const client = await db.pool.connect();
+    const results = [];
+
+    try {
+      await client.query('BEGIN'); // Start transaction
+
+      for (const question of questions) {
+        const result = await client.query(
+          'INSERT INTO questions (quiz_id, question_text, question_type, deleted) VALUES ($1, $2, $3, false) RETURNING *',
+          [quizId, question.question_text, question.question_type]
+        );
+        const questionId = result.rows[0].id;
+
+        // Handle options based on question type
+        if (
+          question.question_type === 'multiple-choice' ||
+          question.question_type === 'true-false' ||
+          question.question_type === 'text'
+        ) {
+          await this.insertOptions(questionId, question.options, client);
+        } else if (
+          question.question_type === 'correct-order' ||
+          question.question_type === 'match-pairs'
+        ) {
+          await this.insertOptionsGrid(
+            questionId,
+            question.options,
+            question.question_type === 'correct-order',
+            client
           );
         }
-      } else if (question.question_type === 'text') {
-        await db.query(
-          'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
-          [questionId, question.options[0].option_text, true]
+
+        results.push(result.rows[0]);
+      }
+
+      await client.query('COMMIT'); // Commit transaction
+      return results;
+    } catch (error) {
+      await client.query('ROLLBACK'); // Rollback transaction on error
+      console.error('Error in QuizQueries.addQuestions:', error);
+      throw new Error('Failed to add questions to the quiz');
+    } finally {
+      client.release();
+    }
+  }
+
+  // Helper method to insert multiple-choice or true-false options
+  async insertOptions(questionId, options, client) {
+    for (const option of options) {
+      await client.query(
+        'INSERT INTO options (question_id, option_text, is_correct, option_uuid) VALUES ($1, $2, $3, uuid_generate_v4())',
+        [questionId, option.option_text, option.is_correct]
+      );
+    }
+  }
+
+  // Helper method to insert correct-order or match-pairs options
+  async insertOptionsGrid(questionId, options, isCorrectOrder = false, client) {
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+
+      if (isCorrectOrder) {
+        // For correct-order: store order number as left_option_text and option text as right_option_text
+        await client.query(
+          `INSERT INTO options_grid (question_id, left_option_text, right_option_text, left_option_uuid, right_option_uuid) 
+         VALUES ($1, $2, $3, uuid_generate_v4(), uuid_generate_v4())`,
+          [questionId, `${i + 1}`, option.option_text] // Order number, then actual text
+        );
+      } else {
+        // For match-pairs: store left text and right text as usual
+        await client.query(
+          `INSERT INTO options_grid (question_id, left_option_text, right_option_text, left_option_uuid, right_option_uuid) 
+         VALUES ($1, $2, $3, uuid_generate_v4(), uuid_generate_v4())`,
+          [questionId, option.left_option_text, option.right_option_text] // Standard match-pairs format
         );
       }
-      results.push(result.rows[0]);
     }
-    return results;
   }
 
   /**

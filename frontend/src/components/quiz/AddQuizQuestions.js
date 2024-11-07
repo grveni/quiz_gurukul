@@ -46,22 +46,24 @@ const AddQuestions = () => {
   const handleQuestionChange = (index, field, value) => {
     const newQuestions = [...questions];
     newQuestions[index][field] = value;
-    if (field === 'question_type' && value === 'true-false') {
-      newQuestions[index].options = [
-        { option_text: 'True', is_correct: false },
-        { option_text: 'False', is_correct: false },
-      ];
-    } else if (field === 'question_type' && value !== 'multiple-choice') {
-      newQuestions[index].options = [
-        {
-          option_text: value === 'true-false' ? 'True' : '',
-          is_correct: false,
-        },
-        {
-          option_text: value === 'true-false' ? 'False' : '',
-          is_correct: false,
-        },
-      ];
+
+    if (field === 'question_type') {
+      if (value === 'true-false') {
+        newQuestions[index].options = [
+          { option_text: 'True', is_correct: false },
+          { option_text: 'False', is_correct: false },
+        ];
+      } else if (value === 'text') {
+        newQuestions[index].options = [{ option_text: '', is_correct: true }];
+      } else if (value === 'multiple-choice') {
+        newQuestions[index].options = [{ option_text: '', is_correct: false }];
+      } else if (value === 'correct-order') {
+        newQuestions[index].options = [{ option_text: '' }];
+      } else if (value === 'match-pairs') {
+        newQuestions[index].options = [
+          { left_option_text: '', right_option_text: '' },
+        ];
+      }
     }
     setQuestions(newQuestions);
   };
@@ -93,20 +95,22 @@ const AddQuestions = () => {
     e.preventDefault();
     setMessage('');
     setError('');
-    // Validate no empty fields
+
     for (const question of questions) {
       if (!question.question_text.trim()) {
         setError('Please fill out all fields.');
         return;
       }
-      if (
-        question.question_type === 'text' &&
-        !question.options[0].option_text.trim()
+
+      if (question.question_type === 'text') {
+        if (!question.options[0].option_text.trim()) {
+          setError('Please fill out all fields.');
+          return;
+        }
+      } else if (
+        question.question_type === 'multiple-choice' ||
+        question.question_type === 'true-false'
       ) {
-        setError('Please fill out all fields.');
-        return;
-      }
-      if (question.question_type !== 'text') {
         let correctOptionSelected = false;
         for (const option of question.options) {
           if (!option.option_text.trim()) {
@@ -123,8 +127,25 @@ const AddQuestions = () => {
           );
           return;
         }
+      } else if (question.question_type === 'correct-order') {
+        for (const option of question.options) {
+          if (!option.option_text.trim()) {
+            setError('Please fill out all fields.');
+            return;
+          }
+        }
+      } else if (question.question_type === 'match-pairs') {
+        for (const pair of question.options) {
+          if (!pair.left_option_text.trim() || !pair.right_option_text.trim()) {
+            setError(
+              'Please fill out both left and right options for each pair.'
+            );
+            return;
+          }
+        }
       }
     }
+
     try {
       await addQuestions(selectedQuiz, questions);
       setMessage('Questions added successfully!');
@@ -197,6 +218,8 @@ const AddQuestions = () => {
                 <option value="multiple-choice">Multiple Choice</option>
                 <option value="true-false">True/False</option>
                 <option value="text">Text</option>
+                <option value="correct-order">Correct Order</option>
+                <option value="match-pairs">Match Pairs</option>
               </select>
             </div>
             {(question.question_type === 'multiple-choice' ||
@@ -254,9 +277,79 @@ const AddQuestions = () => {
                 />
               </div>
             )}
+            {question.question_type === 'correct-order' &&
+              question.options.map((option, oIndex) => (
+                <div key={oIndex} className="option-block">
+                  <input
+                    type="text"
+                    value={option.option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        qIndex,
+                        oIndex,
+                        'option_text',
+                        e.target.value
+                      )
+                    }
+                    placeholder={`Step ${oIndex + 1}`}
+                    required
+                  />
+                  <DeleteIcon
+                    onClick={() => handleDeleteOption(qIndex, oIndex)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
+              ))}
+            {question.question_type === 'match-pairs' &&
+              question.options.map((pair, pIndex) => (
+                <div key={pIndex} className="pair-block">
+                  <input
+                    type="text"
+                    placeholder="Left option"
+                    value={pair.left_option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        qIndex,
+                        pIndex,
+                        'left_option_text',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Right option"
+                    value={pair.right_option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        qIndex,
+                        pIndex,
+                        'right_option_text',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+                  <DeleteIcon
+                    onClick={() => handleDeleteOption(qIndex, pIndex)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
+              ))}
             {question.question_type === 'multiple-choice' && (
               <button type="button" onClick={() => handleAddOption(qIndex)}>
                 Add Option
+              </button>
+            )}
+            {question.question_type === 'correct-order' && (
+              <button type="button" onClick={() => handleAddOption(qIndex)}>
+                Add Step
+              </button>
+            )}
+            {question.question_type === 'match-pairs' && (
+              <button type="button" onClick={() => handleAddOption(qIndex)}>
+                Add Pair
               </button>
             )}
           </div>

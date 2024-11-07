@@ -40,7 +40,7 @@ class QuizController extends Controller {
           await body(field)
             .isArray()
             .optional()
-            .custom((questions, { req }) => {
+            .custom((questions) => {
               if (questions && questions.length > 0) {
                 for (const question of questions) {
                   if (!this.validateQuestion(question)) {
@@ -69,58 +69,138 @@ class QuizController extends Controller {
   }
 
   /**
-   * Validate a single question object
-   * @param {Object} question - The question object to be validated
+   * Validate individual question structure
+   * @param {Object} question - The question to validate
    * @returns {Boolean} - Returns true if the question is valid, otherwise false
    */
   validateQuestion(question) {
-    if (!question.question_text || typeof question.question_text !== 'string') {
-      console.log(
-        'Validation failed: question_text is missing or not a string.',
-        question
-      );
-      return false;
-    }
-
     if (
-      ['multiple-choice', 'true-false', 'text'].indexOf(
-        question.question_type
-      ) === -1
+      !question.question_text ||
+      typeof question.question_text !== 'string' ||
+      !question.question_text.trim()
     ) {
-      console.log('Validation failed: question_type is invalid.', question);
       return false;
     }
 
-    if (question.question_type === 'multiple-choice') {
-      const hasCorrectOption =
-        question.options && question.options.some((opt) => opt.is_correct);
-      if (!hasCorrectOption || question.options.length < 1) {
-        console.log(
-          'Validation failed: multiple-choice question must have at least one correct option and one option.',
-          question
-        );
+    switch (question.question_type) {
+      case 'multiple-choice':
+        return this.validateMultipleChoiceQuestion(question);
+      case 'true-false':
+        return this.validateTrueFalseQuestion(question);
+      case 'text':
+        return this.validateTextQuestion(question);
+      case 'correct-order':
+        return this.validateCorrectOrderQuestion(question);
+      case 'match-pairs':
+        return this.validateMatchPairsQuestion(question);
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Validate multiple-choice question
+   * @param {Object} question - The question object
+   * @returns {Boolean} - Returns true if valid, otherwise false
+   */
+  validateMultipleChoiceQuestion(question) {
+    if (!Array.isArray(question.options) || question.options.length < 2) {
+      return false;
+    }
+
+    let hasCorrectOption = false;
+    for (const option of question.options) {
+      if (
+        !option.option_text ||
+        typeof option.option_text !== 'string' ||
+        !option.option_text.trim()
+      ) {
         return false;
       }
-    } else if (question.question_type === 'true-false') {
-      const hasCorrectOption =
-        question.options && question.options.some((opt) => opt.is_correct);
-      if (!hasCorrectOption || question.options.length !== 2) {
-        console.log(
-          'Validation failed: true-false question must have exactly two options and one correct option.',
-          question
-        );
-        return false;
+      if (option.is_correct) {
+        hasCorrectOption = true;
       }
-    } else if (question.question_type === 'text') {
-      if (!question.options[0]?.option_text) {
-        console.log(
-          'Validation failed: text question must have a correct answer.',
-          question
-        );
+    }
+    return hasCorrectOption;
+  }
+
+  /**
+   * Validate true-false question
+   * @param {Object} question - The question object
+   * @returns {Boolean} - Returns true if valid, otherwise false
+   */
+  validateTrueFalseQuestion(question) {
+    if (!Array.isArray(question.options) || question.options.length !== 2) {
+      return false;
+    }
+
+    const trueFalseOptions = question.options.map((opt) =>
+      opt.option_text.toLowerCase()
+    );
+    return (
+      trueFalseOptions.includes('true') && trueFalseOptions.includes('false')
+    );
+  }
+
+  /**
+   * Validate text question
+   * @param {Object} question - The question object
+   * @returns {Boolean} - Returns true if valid, otherwise false
+   */
+  validateTextQuestion(question) {
+    return (
+      question.options &&
+      question.options[0].option_text &&
+      typeof question.options[0].option_text === 'string'
+    );
+  }
+
+  /**
+   * Validate correct-order question
+   * @param {Object} question - The question object
+   * @returns {Boolean} - Returns true if valid, otherwise false
+   */
+  validateCorrectOrderQuestion(question) {
+    if (!Array.isArray(question.options) || question.options.length < 2) {
+      return false;
+    }
+    console.log(question);
+    for (const step of question.options) {
+      console.log(step);
+
+      if (
+        !step.option_text ||
+        typeof step.option_text !== 'string' ||
+        !step.option_text.trim()
+      ) {
         return false;
       }
     }
+    return true;
+  }
 
+  /**
+   * Validate match-pairs question
+   * @param {Object} question - The question object
+   * @returns {Boolean} - Returns true if valid, otherwise false
+   */
+  validateMatchPairsQuestion(question) {
+    if (!Array.isArray(question.options) || question.options.length < 1) {
+      return false;
+    }
+
+    for (const pair of question.options) {
+      if (
+        !pair.left_option_text ||
+        typeof pair.left_option_text !== 'string' ||
+        !pair.left_option_text.trim() ||
+        !pair.right_option_text ||
+        typeof pair.right_option_text !== 'string' ||
+        !pair.right_option_text.trim()
+      ) {
+        return false;
+      }
+    }
     return true;
   }
 
@@ -178,24 +258,42 @@ class QuizController extends Controller {
 
   /**
    * Add multiple questions to a quiz
+   * Controller to add multiple questions to a quiz
    * @param {Object} req - The request object
    * @param {Object} res - The response object
    * @returns {void}
+   *
+   * This method validates the input for required fields ('quizId', 'questions') and
+   * calls the model method to add questions to the specified quiz.
    */
   async addQuestions(req, res) {
     try {
+      // Step 1: Input validation
       const isValid = await this.inputValidation(
         ['quizId', 'questions'],
         req,
         res
       );
-      if (!isValid) return;
+      if (!isValid) {
+        return; // Input validation failed, so return early
+      }
 
+      // Step 2: Extract data from the request body
       const { quizId, questions } = req.body;
+      console.log(`Adding questions to quiz with ID: ${quizId}`); // Debugging log
+
+      // Step 3: Add questions using the model method
       const addedQuestions = await Quiz.addQuestions(quizId, questions);
+      console.log(
+        `Successfully added questions: ${JSON.stringify(addedQuestions)}`
+      ); // Debugging log
+
+      // Step 4: Return success response
       res.status(201).json({ addedQuestions });
     } catch (error) {
-      this.handleError(res, error);
+      // Step 5: Error handling
+      console.error('Error occurred while adding questions:', error); // Log error for debugging
+      this.handleError(res, error); // Propagate error response
     }
   }
 
@@ -739,7 +837,7 @@ class QuizController extends Controller {
     try {
       const userId = req.user.id; // Extract the user ID from the token
       const newQuizzes = await Quiz.getUnattemptedQuizzes(userId);
-      console.log(newQuizzes);
+      console.log('New Quizzes: ', newQuizzes);
       return res.status(200).json({ quizzes: newQuizzes });
     } catch (error) {
       console.error('Error fetching new quizzes:', error);
