@@ -9,12 +9,12 @@ const QuizDetails = () => {
   const [quiz, setQuiz] = useState({
     title: '',
     description: '',
-    metaEdited: false, // Flag for title or description change
+    metaEdited: false,
   });
   const [questions, setQuestions] = useState([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [validationErrors, setValidationErrors] = useState([]); // Track validation errors per question
+  const [validationErrors, setValidationErrors] = useState([]);
 
   useEffect(() => {
     async function fetchQuizDetails() {
@@ -24,7 +24,7 @@ const QuizDetails = () => {
           setQuiz({
             title: quizData.quiz.title || '',
             description: quizData.quiz.description || '',
-            metaEdited: false, // Initialize as false
+            metaEdited: false,
           });
         } else {
           setError('Title and Description not set');
@@ -55,9 +55,19 @@ const QuizDetails = () => {
 
   const handleOptionChange = (qIndex, oIndex, field, value) => {
     const newQuestions = [...questions];
-    newQuestions[qIndex].options[oIndex][field] = value;
-    if (!newQuestions[qIndex].deleted) {
-      newQuestions[qIndex].isEdited = true;
+    const question = newQuestions[qIndex];
+
+    if (
+      question.question_type === 'correct-order' ||
+      question.question_type === 'match-pairs'
+    ) {
+      question.options[oIndex][field] = value;
+    } else {
+      question.options[oIndex][field] = value;
+    }
+
+    if (!question.deleted) {
+      question.isEdited = true;
     }
     setQuestions(newQuestions);
   };
@@ -95,13 +105,6 @@ const QuizDetails = () => {
               }) must have at least one correct answer.`
             );
           }
-          if (question.options.length < 1) {
-            errors.push(
-              `Question ${i + 1} (${
-                question.question_text
-              }) must have at least one option.`
-            );
-          }
         } else if (question.question_type === 'true-false') {
           const correctOptionsCount = question.options.filter(
             (opt) => opt.is_correct
@@ -121,6 +124,26 @@ const QuizDetails = () => {
               }) must have a correct answer.`
             );
           }
+        } else if (question.question_type === 'correct-order') {
+          if (question.options.length < 2) {
+            errors.push(
+              `Question ${
+                i + 1
+              } (Correct Order) must have at least two items in sequence.`
+            );
+          }
+        } else if (question.question_type === 'match-pairs') {
+          question.options.forEach((option, oIndex) => {
+            if (!option.left_option_text || !option.right_option_text) {
+              errors.push(
+                `Question ${
+                  i + 1
+                } (Match Pairs) - Both left and right options must be filled for option ${
+                  oIndex + 1
+                }.`
+              );
+            }
+          });
         }
       }
     }
@@ -135,21 +158,20 @@ const QuizDetails = () => {
       return;
     }
     try {
-      // Create a list of updated or deleted questions
       const updatedQuestions = questions.filter((q) => q.isEdited || q.deleted);
 
       await updateQuiz(quizId, {
         title: quiz.title,
         description: quiz.description,
-        metaEdited: quiz.metaEdited, // Send metaEdited flag
-        questions: updatedQuestions, // Send only updated or deleted questions
+        metaEdited: quiz.metaEdited,
+        questions: updatedQuestions,
       });
       setMessage('Quiz updated successfully!');
-      setError(''); // Clear error message
-      setValidationErrors([]); // Clear validation errors
+      setError('');
+      setValidationErrors([]);
     } catch (error) {
       setError('Failed to update quiz');
-      setMessage(''); // Clear success message
+      setMessage('');
     }
   };
 
@@ -178,12 +200,21 @@ const QuizDetails = () => {
 
   const handleAddOption = (qIndex) => {
     const newQuestions = [...questions];
-    newQuestions[qIndex].options.push({
-      option_text: '',
-      is_correct: false,
-    });
-    if (!newQuestions[qIndex].deleted) {
-      newQuestions[qIndex].isEdited = true;
+    const question = newQuestions[qIndex];
+
+    if (question.question_type === 'correct-order') {
+      question.options.push({
+        option_text: '',
+        order: question.options.length + 1,
+      });
+    } else if (question.question_type === 'match-pairs') {
+      question.options.push({ left_option_text: '', right_option_text: '' });
+    } else {
+      question.options.push({ option_text: '', is_correct: false });
+    }
+
+    if (!question.deleted) {
+      question.isEdited = true;
     }
     setQuestions(newQuestions);
   };
@@ -221,18 +252,14 @@ const QuizDetails = () => {
         >
           <div className="question-header">
             <label>Question {index + 1}</label>
-            <div>
-              <DeleteIcon
-                onClick={() => handleToggleDeleteQuestion(question.id)}
-                style={{
-                  cursor: 'pointer',
-                  color: question.deleted ? 'red' : 'inherit',
-                }}
-                titleAccess={
-                  question.deleted ? 'Undo delete' : 'Delete question'
-                }
-              />
-            </div>
+            <DeleteIcon
+              onClick={() => handleToggleDeleteQuestion(question.id)}
+              style={{
+                cursor: 'pointer',
+                color: question.deleted ? 'red' : 'inherit',
+              }}
+              titleAccess={question.deleted ? 'Undo delete' : 'Delete question'}
+            />
           </div>
           <div>
             <label>Question Text</label>
@@ -259,6 +286,8 @@ const QuizDetails = () => {
               <MenuItem value="multiple-choice">Multiple Choice</MenuItem>
               <MenuItem value="true-false">True/False</MenuItem>
               <MenuItem value="text">Text</MenuItem>
+              <MenuItem value="correct-order">Correct Order</MenuItem>
+              <MenuItem value="match-pairs">Match Pairs</MenuItem>
             </Select>
           </div>
           {question.question_type === 'multiple-choice' && (
@@ -293,7 +322,7 @@ const QuizDetails = () => {
                         )
                       }
                       disabled={question.deleted}
-                    />
+                    />{' '}
                     Correct
                   </label>
                   {question.options.length > 1 && !question.deleted && (
@@ -338,7 +367,7 @@ const QuizDetails = () => {
                           )
                         }
                         disabled={question.deleted}
-                      />
+                      />{' '}
                       Correct
                     </label>
                   </div>
@@ -357,6 +386,78 @@ const QuizDetails = () => {
                 required
                 disabled={question.deleted}
               />
+            </div>
+          )}
+          {question.question_type === 'correct-order' && (
+            <div>
+              <label>Order Options</label>
+              {question.options.map((option, oIndex) => (
+                <div key={oIndex} className="option-block">
+                  <input
+                    type="text"
+                    value={option.option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        index,
+                        oIndex,
+                        'option_text',
+                        e.target.value
+                      )
+                    }
+                    required
+                    disabled={question.deleted}
+                  />
+                </div>
+              ))}
+              {!question.deleted && (
+                <button type="button" onClick={() => handleAddOption(index)}>
+                  Add Order Option
+                </button>
+              )}
+            </div>
+          )}
+          {question.question_type === 'match-pairs' && (
+            <div>
+              <label>Match Pairs Options</label>
+              {question.options.map((option, oIndex) => (
+                <div key={oIndex} className="option-pair-block">
+                  <input
+                    type="text"
+                    placeholder="Left Option"
+                    value={option.left_option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        index,
+                        oIndex,
+                        'left_option_text',
+                        e.target.value
+                      )
+                    }
+                    required
+                    disabled={question.deleted}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Right Option"
+                    value={option.right_option_text}
+                    onChange={(e) =>
+                      handleOptionChange(
+                        index,
+                        oIndex,
+                        'right_option_text',
+                        e.target.value
+                      )
+                    }
+                    required
+                    disabled={question.deleted}
+                  />
+                </div>
+              ))}
+              {!question.deleted && (
+                <button type="button" onClick={() => handleAddOption(index)}>
+                  Add Match Pair
+                </button>
+              )}
             </div>
           )}
         </div>

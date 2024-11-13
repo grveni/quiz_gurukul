@@ -169,26 +169,47 @@ class QuizQueries extends Query {
   async findQuestionsByQuizId(quizId) {
     try {
       console.log(quizId);
+
+      // Query to get questions and options based on question type
       const questionsResult = await db.query(
         `
-          SELECT 
-            q.id as question_id, 
-            q.question_text, 
-            q.question_type, 
-            q.created_at, 
-            q.updated_at, 
-            o.id as option_id, 
-            o.option_text,
-            o.is_correct
-          FROM 
-            questions q 
-          INNER JOIN 
-            options o 
-          ON 
-            q.id = o.question_id 
-          WHERE 
-            q.quiz_id = $1 AND q.deleted = false
-          `,
+      SELECT 
+        q.id as question_id, 
+        q.question_text, 
+        q.question_type, 
+        q.created_at, 
+        q.updated_at,
+        CASE 
+          WHEN q.question_type IN ('multiple-choice', 'true-false', 'text') THEN o.id
+          ELSE og.id
+        END AS option_id,
+        CASE 
+          WHEN q.question_type IN ('multiple-choice', 'true-false', 'text') THEN o.option_text
+          ELSE og.right_option_text
+        END AS option_text,
+        CASE 
+          WHEN q.question_type IN ('multiple-choice', 'true-false') THEN o.is_correct::text
+          ELSE NULL
+        END AS is_correct,
+        CASE
+          WHEN q.question_type = 'correct-order' THEN og.left_option_text
+          ELSE NULL
+        END AS order_sequence,
+        CASE
+          WHEN q.question_type = 'match-pairs' THEN og.left_option_text
+          ELSE NULL
+        END AS left_option_text
+      FROM 
+        questions q
+      LEFT JOIN 
+        options o ON q.id = o.question_id AND q.question_type IN ('multiple-choice', 'true-false', 'text')
+      LEFT JOIN 
+        options_grid og ON q.id = og.question_id AND q.question_type IN ('correct-order', 'match-pairs')
+      WHERE 
+        q.quiz_id = $1 AND q.deleted = false
+      ORDER BY 
+        q.id, o.id, og.id;
+      `,
         [quizId]
       );
 
@@ -197,10 +218,12 @@ class QuizQueries extends Query {
         return null;
       }
 
+      // Map to organize questions and their options
       const questionsMap = new Map();
 
       questionsResult.rows.forEach((row) => {
         const questionId = row.question_id;
+
         if (!questionsMap.has(questionId)) {
           questionsMap.set(questionId, {
             id: questionId,
@@ -213,16 +236,33 @@ class QuizQueries extends Query {
         }
 
         if (row.option_id) {
-          questionsMap.get(questionId).options.push({
-            id: row.option_id,
-            option_text: row.option_text,
-            is_correct: row.is_correct,
-          });
+          const question = questionsMap.get(questionId);
+
+          // Structure options based on question type
+          if (row.question_type === 'correct-order') {
+            question.options.push({
+              id: row.option_id,
+              option_text: row.option_text,
+              order: parseInt(row.order_sequence, 10), // order from left_option_text
+            });
+          } else if (row.question_type === 'match-pairs') {
+            question.options.push({
+              id: row.option_id,
+              left_option_text: row.left_option_text,
+              right_option_text: row.option_text,
+            });
+          } else {
+            question.options.push({
+              id: row.option_id,
+              option_text: row.option_text,
+              is_correct: row.is_correct === 'true', // Convert back to boolean
+            });
+          }
         }
       });
 
+      // Convert the map to an array
       const questions = Array.from(questionsMap.values());
-
       return questions;
     } catch (error) {
       console.error('Error fetching questions:', error);
