@@ -845,6 +845,78 @@ class QuizQueries extends Query {
     }
   }
 
+  async insertOptionsGrid(client, questionId, options, questionType) {
+    for (const option of options) {
+      await client.query(
+        `INSERT INTO options_grid (question_id, left_option_text, right_option_text) VALUES ($1, $2, $3)`,
+        [
+          questionId,
+          option.left_option_text || `${options.indexOf(option) + 1}`, // Order number for correct-order
+          option.right_option_text || option.option_text, // Right option text or option text for match-pairs
+        ]
+      );
+    }
+    console.log(
+      `Inserted options for question ID ${questionId} into options_grid table for type ${questionType}.`
+    );
+  }
+
+  async insertOptions(client, questionId, options) {
+    for (const option of options) {
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
+        [questionId, option.option_text, option.is_correct]
+      );
+    }
+    console.log(
+      `Inserted options for question ID ${questionId} into options table.`
+    );
+  }
+
+  /*
+   * clearExistingOptions:  clears existing options for the question from the options or options_grid table, depending on the questionType
+   */
+  async clearExistingOptions(client, questionId, questionType) {
+    if (['multiple-choice', 'true-false', 'text'].includes(questionType)) {
+      await client.query('DELETE FROM options WHERE question_id = $1', [
+        questionId,
+      ]);
+      console.log(
+        `Cleared existing options for question ID ${questionId} from options table.`
+      );
+    } else if (['correct-order', 'match-pairs'].includes(questionType)) {
+      await client.query('DELETE FROM options_grid WHERE question_id = $1', [
+        questionId,
+      ]);
+      console.log(
+        `Cleared existing options for question ID ${questionId} from options_grid table.`
+      );
+    }
+  }
+
+  /*
+   * updateQuestionTextAndType: updates the question’s text and type in the questions table.
+   */
+  async updateQuestionTextAndType(
+    client,
+    questionId,
+    questionText,
+    questionType
+  ) {
+    const updateQuestionQuery = `
+      UPDATE questions 
+      SET question_text = $1, question_type = $2, updated_at = NOW() 
+      WHERE id = $3 RETURNING *`;
+    const result = await client.query(updateQuestionQuery, [
+      questionText,
+      questionType,
+      questionId,
+    ]);
+    const updatedQuestion = result.rows[0];
+    console.log('Updated question:', updatedQuestion);
+    return updatedQuestion;
+  }
+
   /**
    * Update a question by marking the old one as deleted and inserting a new one
    * @param {Number} questionId - The ID of the existing question
@@ -861,28 +933,27 @@ class QuizQueries extends Query {
       options,
     });
 
-    const client = await db.pool.connect(); // Get a client from the connection pool
+    const client = await db.pool.connect();
 
     try {
       await client.query('BEGIN'); // Start transaction
 
-      // Mark the existing question as deleted
-      await this.markQuestionAsDeleted(questionId, client);
-
-      // Insert the new question
-      const result = await client.query(
-        `INSERT INTO questions (quiz_id, question_text, question_type, deleted) VALUES ((SELECT quiz_id FROM questions WHERE id = $1), $2, $3, false) RETURNING *`,
-        [questionId, questionText, questionType]
+      // Step 1: Update the question text and type
+      const updatedQuestion = await this.updateQuestionTextAndType(
+        client,
+        questionId,
+        questionText,
+        questionType
       );
-      const newQuestion = result.rows[0];
-      console.log('New question inserted:', newQuestion);
 
-      // Insert options for the new question
-      for (const option of options) {
-        await client.query(
-          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [newQuestion.id, option.option_text, option.is_correct]
-        );
+      // Step 2: Clear existing options for this question
+      await this.clearExistingOptions(client, questionId, questionType);
+
+      // Step 3: Insert new options based on question type
+      if (['multiple-choice', 'true-false', 'text'].includes(questionType)) {
+        await this.insertOptions(client, questionId, options);
+      } else if (['correct-order', 'match-pairs'].includes(questionType)) {
+        await this.insertOptionsGrid(client, questionId, options, questionType);
       }
 
       await client.query('COMMIT'); // Commit transaction
@@ -890,13 +961,13 @@ class QuizQueries extends Query {
         'Transaction committed, question and options updated successfully.'
       );
 
-      return newQuestion;
+      return updatedQuestion;
     } catch (error) {
       await client.query('ROLLBACK'); // Rollback transaction on error
       console.error('Transaction rolled back due to error:', error);
       throw error;
     } finally {
-      client.release(); // Release the client back to the pool
+      client.release();
     }
   }
 

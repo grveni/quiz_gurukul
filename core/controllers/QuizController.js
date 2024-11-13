@@ -468,7 +468,6 @@ class QuizController extends Controller {
    */
   async updateQuiz(req, res) {
     try {
-      // Log the incoming request parameters
       console.log('Received updateQuiz request:', req.params);
       console.log('Received body:', req.body);
 
@@ -482,14 +481,12 @@ class QuizController extends Controller {
       const { quizId } = req.params;
       const { title, description, questions, metaEdited } = req.body;
 
-      // Log the flags and parameters
       console.log('Quiz ID:', quizId);
       console.log('Title:', title);
       console.log('Description:', description);
       console.log('Meta Edited:', metaEdited);
       console.log('Questions:', questions);
 
-      // Update the quiz only if the title or description has been edited
       let updatedQuiz = null;
       if (metaEdited) {
         console.log('Updating quiz metadata...');
@@ -497,7 +494,6 @@ class QuizController extends Controller {
         console.log('Updated Quiz:', updatedQuiz);
       }
 
-      // Process edited and deleted questions
       if (questions && questions.length > 0) {
         console.log('Processing questions...');
         await Quiz.updateQuizQuestions(quizId, questions);
@@ -508,8 +504,6 @@ class QuizController extends Controller {
         message: 'Quiz updated successfully',
         updatedQuiz,
       });
-
-      // Log the success response
       console.log('Quiz update completed successfully');
     } catch (error) {
       console.error('Error updating quiz:', error);
