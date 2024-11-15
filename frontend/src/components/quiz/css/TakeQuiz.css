@@ -76,3 +76,69 @@ button {
   color: red;
   margin-top: 10px;
 }
+
+.option,
+.option-with-dropdown,
+.pair-option {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.option-with-dropdown label,
+.pair-option label {
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.take-quiz .option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.take-quiz .option input[type='checkbox'],
+.take-quiz .option input[type='radio'] {
+  margin-right: 10px; /* Adds space between the option button and text */
+}
+
+.take-quiz .option-with-dropdown {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.take-quiz .option-with-dropdown label {
+  margin-right: 10px; /* Adds space between the label and dropdown */
+}
+
+.take-quiz .option-with-dropdown select {
+  margin-left: 5px;
+  font-size: 16px; /* Match font size of other option text */
+  vertical-align: middle; /* Aligns dropdown text vertically with label */
+}
+
+.take-quiz .pair-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.take-quiz .pair-option label {
+  margin-right: 10px; /* Adds space between the label and dropdown */
+}
+
+.take-quiz .pair-option select {
+  margin-left: 5px;
+  font-size: 16px; /* Match font size of other option text */
+  vertical-align: middle; /* Aligns dropdown text vertically with label */
+}
+
+.option input[type='checkbox'],
+.option input[type='radio'],
+.option label,
+.option-with-dropdown label,
+.pair-option label {
+  font-size: 16px; /* Adjust to match option text size */
+  vertical-align: middle;
+}

@@ -52,6 +52,35 @@ class QuizController extends Controller {
             })
             .run(req);
           break;
+        case 'answers':
+          await body(field)
+            .isArray()
+            .withMessage('Answers must be an array')
+            .custom((answers) => {
+              for (const answer of answers) {
+                if (
+                  !answer.questionId ||
+                  !answer.questionType ||
+                  (answer.questionType === 'multiple-choice' &&
+                    !Array.isArray(answer.selectedOptions)) ||
+                  (answer.questionType === 'true-false' &&
+                    typeof answer.selectedOption !== 'string') ||
+                  (answer.questionType === 'text' &&
+                    typeof answer.answerText !== 'string') ||
+                  (answer.questionType === 'correct-order' &&
+                    !Array.isArray(answer.orderedOptions)) ||
+                  (answer.questionType === 'match-pairs' &&
+                    !Array.isArray(answer.pairs))
+                ) {
+                  throw new Error(
+                    `Invalid answer data for question ID: ${answer.questionId}`
+                  );
+                }
+              }
+              return true;
+            })
+            .run(req);
+          break;
         default:
           break;
       }
@@ -575,7 +604,7 @@ class QuizController extends Controller {
       const { quizId, answers } = req.body;
       const result = await Quiz.submitQuiz(req.user.id, quizId, answers);
 
-      res.status(200).json({ message: 'successfully submitted!' });
+      res.status(200).json({ message: 'Successfully submitted!', result });
     } catch (error) {
       this.handleError(res, error);
     }

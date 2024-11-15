@@ -217,7 +217,7 @@ class Quiz extends Model {
   }
 
   /**
-   * Get the active quiz and its questions for the student
+   * Get the active/published untaken quiz and its questions for the student
    * @param {Number} studentId - The ID of the student
    * @returns {Object} - The quiz details along with its questions
    */
