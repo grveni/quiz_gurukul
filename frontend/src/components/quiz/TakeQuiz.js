@@ -7,10 +7,6 @@ import {
 } from '../../utils/QuizAPI';
 import './css/TakeQuiz.css';
 
-const shuffleArray = (array) => {
-  return array.sort(() => Math.random() - 0.5);
-};
-
 const TakeQuiz = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
@@ -28,37 +24,33 @@ const TakeQuiz = () => {
           : await getNextUntakenQuiz();
 
         if (quizData && quizData.quiz && quizData.quiz.questions.length > 0) {
-          const shuffledQuestions = quizData.quiz.questions.map((question) => {
-            if (question.question_type === 'correct-order') {
-              question.options = shuffleArray([...question.options]);
-            } else if (question.question_type === 'match-pairs') {
-              question.options = question.options.map((pair) => ({
-                ...pair,
-                right_options: shuffleArray(
-                  question.options.map((p) => p.right_option_text)
-                ),
-              }));
-            }
-            return question;
+          setQuiz(quizData.quiz);
+
+          const initialAnswers = quizData.quiz.questions.map((question) => {
+            const previousAnswer = question.previous_answer || {};
+            return {
+              questionId: question.id,
+              questionType: question.question_type,
+              answer:
+                question.question_type === 'multiple-choice'
+                  ? previousAnswer.selected_option_ids || []
+                  : question.question_type === 'true-false'
+                  ? previousAnswer.selected_option_ids || ''
+                  : question.question_type === 'text'
+                  ? previousAnswer.answer_text || ''
+                  : null,
+              optionPairs:
+                (question.question_type === 'match-pairs' ||
+                  question.question_type === 'correct-order') &&
+                question.options.left_options.map((leftOption, index) => ({
+                  leftUUID: leftOption.left_option_uuid,
+                  rightUUID:
+                    previousAnswer.optionPairs?.[index]?.rightUUID || '',
+                })),
+            };
           });
 
-          setQuiz({ ...quizData.quiz, questions: shuffledQuestions });
-
-          const initialAnswers = shuffledQuestions.map((question) => ({
-            questionId: question.id,
-            questionType: question.question_type,
-            answer:
-              question.question_type === 'multiple-choice' ||
-              question.question_type === 'correct-order'
-                ? []
-                : question.question_type === 'true-false'
-                ? ''
-                : '',
-            matchPairs:
-              question.question_type === 'match-pairs'
-                ? Array(question.options.length).fill('')
-                : null,
-          }));
+          console.log('Initialized Answers State:', initialAnswers);
           setAnswers(initialAnswers);
         } else {
           setMessage('No new quiz available.');
@@ -88,66 +80,87 @@ const TakeQuiz = () => {
     setAnswers(updatedAnswers);
   };
 
-  const handleAnswerTextChange = (questionId, text) => {
+  const handleTextChange = (questionId, text) => {
     const updatedAnswers = answers.map((answer) =>
       answer.questionId === questionId ? { ...answer, answer: text } : answer
     );
     setAnswers(updatedAnswers);
   };
 
-  const handleOrderSelection = (questionId, optionIndex, order) => {
-    const updatedAnswers = answers.map((answer) =>
-      answer.questionId === questionId
-        ? {
-            ...answer,
-            answer: answer.answer.map((item, i) =>
-              i === optionIndex ? order : item
-            ),
-          }
-        : answer
-    );
-    setAnswers(updatedAnswers);
-  };
+  const handleDropdownChange = (questionId, index, selectedUuid, type) => {
+    console.log('Dropdown Change:', {
+      questionId,
+      index,
+      selectedUuid,
+      type,
+    });
 
-  const handleMatchPairSelection = (questionId, optionIndex, selection) => {
-    const updatedAnswers = answers.map((answer) =>
-      answer.questionId === questionId
-        ? {
+    setAnswers((prevAnswers) => {
+      const updatedAnswers = prevAnswers.map((answer) => {
+        if (answer.questionId === questionId) {
+          const key = 'optionPairs';
+          const updatedArray = [...(answer[key] || [])];
+
+          const leftUUID =
+            answer[key]?.[index]?.leftUUID ||
+            quiz.questions.find((q) => q.id === questionId).options
+              .left_options[index].left_option_uuid;
+
+          // Ensure rightUUID is a string
+          const rightUUID =
+            typeof selectedUuid === 'string'
+              ? selectedUuid
+              : selectedUuid?.rightUUID || '';
+
+          console.log('Mapping OptionPair:', { leftUUID, rightUUID });
+
+          updatedArray[index] = { leftUUID, rightUUID };
+
+          return {
             ...answer,
-            matchPairs: answer.matchPairs.map((item, i) =>
-              i === optionIndex ? selection : item
-            ),
-          }
-        : answer
-    );
-    setAnswers(updatedAnswers);
+            [key]: updatedArray,
+          };
+        }
+        return answer;
+      });
+
+      console.log(
+        'Updated Answers State After Dropdown Change:',
+        updatedAnswers
+      );
+      return updatedAnswers;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setError('');
+
     try {
       const submissionData = {
-        quizId: quiz.id,
         answers: answers.map((answer) => {
-          const { questionId, questionType } = answer;
+          const { questionId, questionType, optionPairs } = answer;
+
           if (questionType === 'multiple-choice') {
             return { questionId, questionType, selectedOptions: answer.answer };
           } else if (questionType === 'true-false') {
             return { questionId, questionType, selectedOption: answer.answer };
           } else if (questionType === 'text') {
             return { questionId, questionType, answerText: answer.answer };
-          } else if (questionType === 'correct-order') {
-            return { questionId, questionType, orderedOptions: answer.answer };
-          } else if (questionType === 'match-pairs') {
+          } else if (
+            questionType === 'correct-order' ||
+            questionType === 'match-pairs'
+          ) {
             return {
               questionId,
               questionType,
-              pairs: answer.matchPairs.map((selection, i) => ({
-                leftOption: quiz.questions.find((q) => q.id === questionId)
-                  .options[i].left_option_text,
-                rightOption: selection,
+              optionPairs: optionPairs.map(({ leftUUID, rightUUID }) => ({
+                leftUUID,
+                rightUUID:
+                  typeof rightUUID === 'object'
+                    ? rightUUID.rightUUID
+                    : rightUUID,
               })),
             };
           }
@@ -155,8 +168,8 @@ const TakeQuiz = () => {
         }),
       };
 
-      console.log('Submitting answers:', submissionData);
-      await submitQuizAnswers(quiz.id, submissionData);
+      console.log('Prepared Submission Data:', submissionData);
+      await submitQuizAnswers(quizId, submissionData);
       navigate(`/student/results/${quiz.id}`);
     } catch (err) {
       console.error('Error submitting quiz:', err);
@@ -233,65 +246,83 @@ const TakeQuiz = () => {
                 value={
                   answers.find((ans) => ans.questionId === question.id).answer
                 }
-                onChange={(e) =>
-                  handleAnswerTextChange(question.id, e.target.value)
-                }
+                onChange={(e) => handleTextChange(question.id, e.target.value)}
               />
             )}
 
-            {question.question_type === 'correct-order' &&
-              question.options.map((option, optionIndex) => (
-                <div key={option.id} className="option-with-dropdown">
-                  <label>{option.option_text}</label>
-                  <select
-                    value={
-                      answers.find((ans) => ans.questionId === question.id)
-                        .answer[optionIndex]
-                    }
-                    onChange={(e) =>
-                      handleOrderSelection(
-                        question.id,
-                        optionIndex,
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">Select Order</option>
-                    {question.options.map((_, orderIndex) => (
-                      <option key={orderIndex} value={orderIndex + 1}>
-                        {orderIndex + 1}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-
             {question.question_type === 'match-pairs' &&
-              question.options.map((pair, pairIndex) => (
-                <div key={pairIndex} className="pair-option">
-                  <label>{pair.left_option_text}</label>
-                  <select
-                    value={
-                      answers.find((ans) => ans.questionId === question.id)
-                        .matchPairs[pairIndex]
-                    }
-                    onChange={(e) =>
-                      handleMatchPairSelection(
-                        question.id,
-                        pairIndex,
-                        e.target.value
-                      )
-                    }
+              question.options.left_options.map((leftOption, i) => {
+                const selectedValue =
+                  answers.find((ans) => ans.questionId === question.id)
+                    ?.optionPairs?.[i]?.rightUUID || '';
+
+                return (
+                  <div
+                    key={leftOption.left_option_uuid}
+                    className="pair-option"
                   >
-                    <option value="">Select Match</option>
-                    {pair.right_options.map((rightOption, rightIndex) => (
-                      <option key={rightIndex} value={rightOption}>
-                        {rightOption}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+                    <label>{leftOption.left_option_text}</label>
+                    <select
+                      value={selectedValue}
+                      onChange={(e) =>
+                        handleDropdownChange(
+                          question.id,
+                          i,
+                          e.target.value,
+                          'match-pairs'
+                        )
+                      }
+                    >
+                      <option value="">Select Match</option>
+                      {question.options.right_options.map((rightOption) => (
+                        <option
+                          key={rightOption.right_option_uuid}
+                          value={rightOption.right_option_uuid}
+                        >
+                          {rightOption.right_option_text}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+
+            {question.question_type === 'correct-order' &&
+              question.options.left_options.map((leftOption, i) => {
+                const selectedValue =
+                  answers.find((ans) => ans.questionId === question.id)
+                    ?.optionPairs?.[i]?.rightUUID || '';
+
+                return (
+                  <div
+                    key={leftOption.left_option_uuid}
+                    className="pair-option"
+                  >
+                    <label>{leftOption.left_option_text}</label>
+                    <select
+                      value={selectedValue}
+                      onChange={(e) =>
+                        handleDropdownChange(
+                          question.id,
+                          i,
+                          e.target.value,
+                          'correct-order'
+                        )
+                      }
+                    >
+                      <option value="">Select Order</option>
+                      {question.options.right_options.map((rightOption) => (
+                        <option
+                          key={rightOption.right_option_uuid}
+                          value={rightOption.right_option_uuid}
+                        >
+                          {rightOption.right_option_text}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
           </div>
         ))}
         <button type="submit">Submit Quiz</button>

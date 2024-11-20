@@ -25,55 +25,6 @@ class QuizQueries extends Query {
   }
 
   /**
-   * Add a question to a quiz
-   * @param {Number} quizId - The ID of the quiz
-   * @param {String} questionText - The text of the question
-   * @param {String} questionType - The type of the question
-   * @param {Array} options - The options for the question (for multiple-choice and true-false)
-   * @param {String} correctAnswer - The correct answer for the question (for text)
-   * @returns {Object} - The added question
-   */
-  async addQuestion(
-    quizId,
-    questionText,
-    questionType,
-    options,
-    correctAnswer
-  ) {
-    const result = await db.query(
-      `INSERT INTO questions (quiz_id, question_text, question_type) VALUES ($1, $2, $3) RETURNING *`,
-      [quizId, questionText, questionType]
-    );
-
-    const question = result.rows[0];
-
-    if (questionType === 'multiple-choice' && options.length > 0) {
-      for (const option of options) {
-        await db.query(
-          `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-          [question.id, option.text, option.is_correct]
-        );
-      }
-    } else if (questionType === 'true-false') {
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [question.id, 'True', correctAnswer === 'True']
-      );
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [question.id, 'False', correctAnswer === 'False']
-      );
-    } else if (questionType === 'text') {
-      await db.query(
-        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [question.id, correctAnswer, true]
-      );
-    }
-
-    return question;
-  }
-
-  /**
    * Add multiple questions to a quiz
    * @param {Number} quizId - The ID of the quiz
    * @param {Array} questions - The questions to add
@@ -101,16 +52,16 @@ class QuizQueries extends Query {
           question.question_type === 'true-false' ||
           question.question_type === 'text'
         ) {
-          await this.insertOptions(questionId, question.options, client);
+          await this.insertOptions(client, questionId, question.options);
         } else if (
           question.question_type === 'correct-order' ||
           question.question_type === 'match-pairs'
         ) {
           await this.insertOptionsGrid(
+            client,
             questionId,
             question.options,
-            question.question_type === 'correct-order',
-            client
+            question.question_type === 'correct-order'
           );
         }
 
@@ -128,18 +79,8 @@ class QuizQueries extends Query {
     }
   }
 
-  // Helper method to insert multiple-choice or true-false options
-  async insertOptions(questionId, options, client) {
-    for (const option of options) {
-      await client.query(
-        'INSERT INTO options (question_id, option_text, is_correct, option_uuid) VALUES ($1, $2, $3, uuid_generate_v4())',
-        [questionId, option.option_text, option.is_correct]
-      );
-    }
-  }
-
   // Helper method to insert correct-order or match-pairs options
-  async insertOptionsGrid(questionId, options, isCorrectOrder = false, client) {
+  async insertOptionsGrid(client, questionId, options, isCorrectOrder = false) {
     for (let i = 0; i < options.length; i++) {
       const option = options[i];
 
@@ -148,7 +89,7 @@ class QuizQueries extends Query {
         await client.query(
           `INSERT INTO options_grid (question_id, left_option_text, right_option_text, left_option_uuid, right_option_uuid) 
          VALUES ($1, $2, $3, uuid_generate_v4(), uuid_generate_v4())`,
-          [questionId, `${i + 1}`, option.option_text] // Order number, then actual text
+          [questionId, option.option_text, `${i + 1}`] // Order number, then actual text
         );
       } else {
         // For match-pairs: store left text and right text as usual
@@ -168,65 +109,40 @@ class QuizQueries extends Query {
    */
   async findQuestionsByQuizId(quizId) {
     try {
-      console.log(quizId);
-
-      // Query to get questions and options based on question type
-      const questionsResult = await db.query(
+      const result = await db.query(
         `
-      SELECT 
-        q.id as question_id, 
-        q.question_text, 
-        q.question_type, 
-        q.created_at, 
-        q.updated_at,
-        CASE 
-          WHEN q.question_type IN ('multiple-choice', 'true-false', 'text') THEN o.id
-          ELSE og.id
-        END AS option_id,
-        CASE 
-          WHEN q.question_type IN ('multiple-choice', 'true-false', 'text') THEN o.option_text
-          ELSE og.right_option_text
-        END AS option_text,
-        CASE 
-          WHEN q.question_type IN ('multiple-choice', 'true-false') THEN o.is_correct::text
-          ELSE NULL
-        END AS is_correct,
-        CASE
-          WHEN q.question_type = 'correct-order' THEN og.left_option_text
-          ELSE NULL
-        END AS order_sequence,
-        CASE
-          WHEN q.question_type = 'match-pairs' THEN og.left_option_text
-          ELSE NULL
-        END AS left_option_text
-      FROM 
-        questions q
-      LEFT JOIN 
-        options o ON q.id = o.question_id AND q.question_type IN ('multiple-choice', 'true-false', 'text')
-      LEFT JOIN 
-        options_grid og ON q.id = og.question_id AND q.question_type IN ('correct-order', 'match-pairs')
-      WHERE 
-        q.quiz_id = $1 AND q.deleted = false
-      ORDER BY 
-        q.id, o.id, og.id;
+        SELECT 
+          q.id AS question_id,
+          q.question_text,
+          q.question_type,
+          q.created_at,
+          q.updated_at,
+          o.id AS option_id,
+          o.option_text,
+          o.option_uuid,
+          og.left_option_text,
+          og.left_option_uuid,
+          og.right_option_text,
+          og.right_option_uuid
+        FROM 
+          questions q
+        LEFT JOIN 
+          options o ON q.id = o.question_id
+        LEFT JOIN 
+          options_grid og ON q.id = og.question_id
+        WHERE 
+          q.quiz_id = $1 AND q.deleted = false
+        ORDER BY 
+          q.id, o.id, og.id;
       `,
         [quizId]
       );
 
-      if (questionsResult.rowCount === 0) {
-        console.error(`No questions or options found for quiz ID: ${quizId}`);
-        return null;
-      }
-
-      // Map to organize questions and their options
       const questionsMap = new Map();
-
-      questionsResult.rows.forEach((row) => {
-        const questionId = row.question_id;
-
-        if (!questionsMap.has(questionId)) {
-          questionsMap.set(questionId, {
-            id: questionId,
+      result.rows.forEach((row) => {
+        if (!questionsMap.has(row.question_id)) {
+          questionsMap.set(row.question_id, {
+            id: row.question_id,
             question_text: row.question_text,
             question_type: row.question_type,
             created_at: row.created_at,
@@ -235,35 +151,27 @@ class QuizQueries extends Query {
           });
         }
 
-        if (row.option_id) {
-          const question = questionsMap.get(questionId);
+        const question = questionsMap.get(row.question_id);
 
-          // Structure options based on question type
-          if (row.question_type === 'correct-order') {
-            question.options.push({
-              id: row.option_id,
-              option_text: row.option_text,
-              order: parseInt(row.order_sequence, 10), // order from left_option_text
-            });
-          } else if (row.question_type === 'match-pairs') {
-            question.options.push({
-              id: row.option_id,
-              left_option_text: row.left_option_text,
-              right_option_text: row.option_text,
-            });
-          } else {
-            question.options.push({
-              id: row.option_id,
-              option_text: row.option_text,
-              is_correct: row.is_correct === 'true', // Convert back to boolean
-            });
-          }
+        if (row.option_id) {
+          question.options.push({
+            id: row.option_id,
+            option_text: row.option_text,
+            option_uuid: row.option_uuid,
+          });
+        }
+
+        if (row.left_option_uuid) {
+          question.options.push({
+            left_option_uuid: row.left_option_uuid,
+            left_option_text: row.left_option_text,
+            right_option_uuid: row.right_option_uuid,
+            right_option_text: row.right_option_text,
+          });
         }
       });
 
-      // Convert the map to an array
-      const questions = Array.from(questionsMap.values());
-      return questions;
+      return Array.from(questionsMap.values());
     } catch (error) {
       console.error('Error fetching questions:', error);
       throw new Error('Failed to fetch questions');
@@ -390,63 +298,83 @@ class QuizQueries extends Query {
     try {
       await client.query('BEGIN');
 
-      // Get total number of questions for the quiz
-      const totalQuestionsResult = await client.query(
-        `SELECT COUNT(*) as total_questions FROM questions WHERE quiz_id = $1`,
-        [quizId]
+      const totalQuestions = await this.getTotalQuestions(client, quizId);
+      const quizAttemptId = await this.createQuizAttempt(
+        client,
+        studentId,
+        quizId
       );
-      const totalQuestions = parseInt(
-        totalQuestionsResult.rows[0].total_questions
-      );
-
-      // Create quiz attempt with initial score set to 0
-      const quizAttemptResult = await client.query(
-        `INSERT INTO quiz_attempts (user_id, quiz_id, score, percentage) VALUES ($1, $2, $3, $4) RETURNING *`,
-        [studentId, quizId, 0, 0]
-      );
-      const quizAttemptId = quizAttemptResult.rows[0].id;
-
       let score = 0;
-      console.log(answers);
 
-      // Insert responses and calculate score
       for (const answer of answers) {
-        const { questionId, answerText } = answer;
-
+        const { questionId, questionType } = answer;
         let isCorrect = false;
 
-        const correctOptionResult = await client.query(
-          `SELECT * FROM options WHERE question_id = $1 AND option_text = $2 AND is_correct = true`,
-          [questionId, answerText]
-        );
-        isCorrect = correctOptionResult.rowCount > 0;
-
-        if (isCorrect) {
-          score++;
+        if (!questionId || !questionType) {
+          console.log(`Skipping invalid answer:`, answer);
+          continue;
         }
 
-        await client.query(
-          `INSERT INTO responses (attempt_id, question_id, response_text, is_correct) VALUES ($1, $2, $3, $4)`,
-          [quizAttemptId, questionId, answerText, isCorrect]
-        );
+        switch (questionType) {
+          case 'multiple-choice':
+            if (answer.selectedOptions.length > 0) {
+              isCorrect = await this.processMultipleChoice(
+                client,
+                quizAttemptId,
+                questionId,
+                answer
+              );
+            }
+            break;
+          case 'true-false':
+            if (answer.selectedOption) {
+              isCorrect = await this.processTrueFalse(
+                client,
+                quizAttemptId,
+                questionId,
+                answer
+              );
+            }
+            break;
+          case 'text':
+            if (answer.answerText.trim()) {
+              isCorrect = await this.processText(
+                client,
+                quizAttemptId,
+                questionId,
+                answer
+              );
+            }
+            break;
+          case 'correct-order':
+          case 'match-pairs':
+            if (answer.optionPairs.length > 0) {
+              isCorrect = await this.processOptionPairs(
+                client,
+                quizAttemptId,
+                questionId,
+                answer
+              );
+            }
+            break;
+
+          default:
+            console.log(`Unknown question type: ${questionType}`);
+            throw new Error(`Unknown question type: ${questionType}`);
+        }
+
+        if (isCorrect) score++;
       }
 
-      // Calculate percentage based on score and total number of questions
       const percentage = (score / totalQuestions) * 100;
-
-      // Update quiz attempt with score and percentage
-      await client.query(
-        `UPDATE quiz_attempts SET score = $1, percentage = $2 WHERE id = $3`,
-        [score, percentage, quizAttemptId]
+      await this.updateQuizAttemptScore(
+        client,
+        quizAttemptId,
+        score,
+        percentage
       );
 
       await client.query('COMMIT');
-      console.log(
-        'Returning score and percentage',
-        score,
-        percentage,
-        quizAttemptId
-      );
       return { quizAttemptId, score, percentage };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -455,6 +383,165 @@ class QuizQueries extends Query {
     } finally {
       client.release();
     }
+  }
+
+  // Fetch total number of questions for a quiz
+  async getTotalQuestions(client, quizId) {
+    const totalQuestionsResult = await client.query(
+      `SELECT COUNT(*) as total_questions FROM questions WHERE quiz_id = $1`,
+      [quizId]
+    );
+    return parseInt(totalQuestionsResult.rows[0].total_questions);
+  }
+
+  // Create a quiz attempt record in the DB
+  async createQuizAttempt(client, studentId, quizId) {
+    const quizAttemptResult = await client.query(
+      `INSERT INTO quiz_attempts (user_id, quiz_id, score, percentage) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [studentId, quizId, 0, 0]
+    );
+    return quizAttemptResult.rows[0].id;
+  }
+
+  // Helper method to update the score and percentage of a quiz attempt
+  async updateQuizAttemptScore(client, quizAttemptId, score, percentage) {
+    await client.query(
+      `UPDATE quiz_attempts SET score = $1, percentage = $2 WHERE id = $3`,
+      [score, percentage, quizAttemptId]
+    );
+  }
+
+  // Process methods updated for empty checks
+  async processMultipleChoice(client, quizAttemptId, questionId, answer) {
+    if (!answer.selectedOptions.length) {
+      console.log(
+        `Skipping empty multiple-choice answer for questionId: ${questionId}`
+      );
+      return false;
+    }
+
+    const correctOptions = await client.query(
+      `SELECT id FROM options WHERE question_id = $1 AND is_correct = true`,
+      [questionId]
+    );
+    const correctOptionIds = correctOptions.rows.map((row) => row.id);
+    const isCorrect =
+      answer.selectedOptions.every((id) => correctOptionIds.includes(id)) &&
+      correctOptionIds.every((id) => answer.selectedOptions.includes(id));
+
+    for (const optionId of answer.selectedOptions) {
+      await client.query(
+        `INSERT INTO responses (attempt_id, question_id, option_id, is_correct) VALUES ($1, $2, $3, $4)`,
+        [quizAttemptId, questionId, optionId, isCorrect]
+      );
+    }
+
+    return isCorrect;
+  }
+
+  async processTrueFalse(client, quizAttemptId, questionId, answer) {
+    if (!answer.selectedOption) {
+      console.log(
+        `Skipping empty true-false answer for questionId: ${questionId}`
+      );
+      return false;
+    }
+
+    const correctOption = await client.query(
+      `SELECT id FROM options WHERE question_id = $1 AND is_correct = true`,
+      [questionId]
+    );
+    const isCorrect =
+      correctOption.rows.length > 0 &&
+      correctOption.rows[0].id === answer.selectedOption;
+
+    await client.query(
+      `INSERT INTO responses (attempt_id, question_id, option_id, is_correct) VALUES ($1, $2, $3, $4)`,
+      [quizAttemptId, questionId, answer.selectedOption, isCorrect]
+    );
+
+    return isCorrect;
+  }
+
+  // Helper method to process text questions
+  async processText(client, quizAttemptId, questionId, answer) {
+    const correctAnswer = await client.query(
+      `SELECT option_text FROM options WHERE question_id = $1 AND is_correct = true`,
+      [questionId]
+    );
+    const isCorrect =
+      correctAnswer.rows.length > 0 &&
+      correctAnswer.rows[0].option_text === answer.answerText;
+
+    await client.query(
+      `INSERT INTO responses (attempt_id, question_id, response_text, is_correct) VALUES ($1, $2, $3, $4)`,
+      [quizAttemptId, questionId, answer.answerText, isCorrect]
+    );
+
+    return isCorrect;
+  }
+
+  async processOptionPairs(client, quizAttemptId, questionId, answer) {
+    console.log(`Processing pair validation for question ID: ${questionId}`);
+
+    // Step 1: Fetch correct pairs from the database
+    const correctPairs = await client.query(
+      `SELECT left_option_uuid, right_option_uuid 
+       FROM options_grid 
+       WHERE question_id = $1`,
+      [questionId]
+    );
+
+    if (correctPairs.rowCount === 0) {
+      console.error(`No correct pairs found for question ID: ${questionId}`);
+      return false;
+    }
+
+    const correctPairsMap = new Map();
+    correctPairs.rows.forEach((pair) => {
+      correctPairsMap.set(pair.left_option_uuid, pair.right_option_uuid);
+    });
+
+    // Step 2: Validate user response and insert into responses_grid
+    let isQuestionCorrect = true;
+
+    for (const userPair of answer.optionPairs) {
+      console.log(userPair);
+      const { leftUUID, rightUUID } = userPair;
+
+      console.log('UUID : ', leftUUID, rightUUID);
+      // Skip unanswered pairs
+      if (!rightUUID || rightUUID.trim() === '') {
+        console.warn(
+          `Skipping unanswered pair for leftUUID=${leftUUID}. Marking question as incorrect.`
+        );
+        isQuestionCorrect = false; // Mark question incorrect if any pair is unanswered
+        continue;
+      }
+
+      const correctRightUUID = correctPairsMap.get(leftUUID);
+
+      const isCorrect = correctRightUUID === rightUUID;
+      if (!isCorrect) {
+        isQuestionCorrect = false; // At least one mismatch makes the question incorrect
+      }
+
+      // Insert each answered pair into the responses_grid table
+      await client.query(
+        `INSERT INTO responses_grid (attempt_id, question_id, left_option_uuid, right_option_uuid, is_correct) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        [quizAttemptId, questionId, leftUUID, rightUUID, isCorrect]
+      );
+
+      console.log(
+        `Processed pair: leftUUID=${leftUUID}, rightUUID=${rightUUID}, isCorrect=${isCorrect}`
+      );
+    }
+
+    console.log(
+      `Validation complete for question ID: ${questionId}, isQuestionCorrect=${isQuestionCorrect}`
+    );
+    return isQuestionCorrect;
   }
 
   async checkDataConsistency(userId, quizId) {
@@ -845,22 +932,7 @@ class QuizQueries extends Query {
     }
   }
 
-  async insertOptionsGrid(client, questionId, options, questionType) {
-    for (const option of options) {
-      await client.query(
-        `INSERT INTO options_grid (question_id, left_option_text, right_option_text) VALUES ($1, $2, $3)`,
-        [
-          questionId,
-          option.left_option_text || `${options.indexOf(option) + 1}`, // Order number for correct-order
-          option.right_option_text || option.option_text, // Right option text or option text for match-pairs
-        ]
-      );
-    }
-    console.log(
-      `Inserted options for question ID ${questionId} into options_grid table for type ${questionType}.`
-    );
-  }
-
+  // Helper method to insert multiple-choice or true-false options
   async insertOptions(client, questionId, options) {
     for (const option of options) {
       await client.query(
@@ -953,7 +1025,12 @@ class QuizQueries extends Query {
       if (['multiple-choice', 'true-false', 'text'].includes(questionType)) {
         await this.insertOptions(client, questionId, options);
       } else if (['correct-order', 'match-pairs'].includes(questionType)) {
-        await this.insertOptionsGrid(client, questionId, options, questionType);
+        await this.insertOptionsGrid(
+          client,
+          questionId,
+          options,
+          questionType === 'correct-order'
+        );
       }
 
       await client.query('COMMIT'); // Commit transaction

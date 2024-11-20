@@ -64,13 +64,15 @@ class QuizController extends Controller {
                   (answer.questionType === 'multiple-choice' &&
                     !Array.isArray(answer.selectedOptions)) ||
                   (answer.questionType === 'true-false' &&
-                    typeof answer.selectedOption !== 'string') ||
+                    answer.selectedOption !== null &&
+                    answer.selectedOption !== '' &&
+                    typeof answer.selectedOption !== 'string') || // Ensure valid string
                   (answer.questionType === 'text' &&
                     typeof answer.answerText !== 'string') ||
                   (answer.questionType === 'correct-order' &&
-                    !Array.isArray(answer.orderedOptions)) ||
+                    !Array.isArray(answer.optionPairs)) ||
                   (answer.questionType === 'match-pairs' &&
-                    !Array.isArray(answer.pairs))
+                    !Array.isArray(answer.optionPairs))
                 ) {
                   throw new Error(
                     `Invalid answer data for question ID: ${answer.questionId}`
@@ -79,6 +81,12 @@ class QuizController extends Controller {
               }
               return true;
             })
+            .run(req);
+          break;
+        case 'quizId':
+          await body(field)
+            .isInt()
+            .withMessage('Quiz ID must be a valid integer')
             .run(req);
           break;
         default:
@@ -594,15 +602,14 @@ class QuizController extends Controller {
    */
   async submitQuizAnswers(req, res) {
     try {
-      const isValid = await this.inputValidation(
-        ['quizId', 'answers'],
-        req,
-        res
-      );
+      console.log(req.body);
+      const { quizId } = req.params;
+      const userId = req.user.id;
+      const isValid = await this.inputValidation(['answers'], req, res);
       if (!isValid) return;
 
-      const { quizId, answers } = req.body;
-      const result = await Quiz.submitQuiz(req.user.id, quizId, answers);
+      const { answers } = req.body;
+      const result = await Quiz.submitQuiz(userId, quizId, answers);
 
       res.status(200).json({ message: 'Successfully submitted!', result });
     } catch (error) {
@@ -646,79 +653,105 @@ class QuizController extends Controller {
 
   async getQuizForTaking(req, res) {
     const { quizId } = req.params;
-    const userId = req.user.id; // Assuming the user is authenticated and req.user.id provides the user ID
+    const userId = req.user.id;
 
     try {
       console.log(`Fetching quiz for userId: ${userId} and quizId: ${quizId}`);
 
-      // Fetch quiz and questions
+      // Fetch quiz metadata and questions
       const quiz = await Quiz.getQuizById(quizId);
-      console.log('Fetched Quiz:', quiz);
+      if (!quiz) {
+        return res.status(404).json({ message: 'Quiz not found' });
+      }
 
       const questions = await Quiz.listAllQuestions(quizId);
-      console.log('Fetched Questions with Options:', questions);
-
-      // Fetch user's previous attempt responses if they exist
       const lastAttempt = await Quiz.getLastAttemptByUser(quizId, userId);
-      console.log('Fetched Last Attempt by User:', lastAttempt);
 
-      // Attach the questions and previous answers (if any) to the quiz
-      quiz.questions = questions;
-
-      if (lastAttempt && lastAttempt.length > 0) {
-        // Attach user's previous answers to the quiz questions
-        quiz.questions.forEach((question) => {
-          const previousAnswer = lastAttempt.find(
-            (answer) => answer.question_id === question.id
-          );
-
-          if (previousAnswer) {
-            if (
-              question.question_type === 'multiple-choice' ||
-              question.question_type === 'true-false'
-            ) {
-              // Compare response_text with each option_text to find the selected option
-              const selectedOption = question.options.find(
-                (option) => option.option_text === previousAnswer.response_text
-              );
-
-              console.log(
-                `For Question ID ${question.id}, matching response_text with option_text`
-              );
-
-              question.previous_answer = {
-                selected_option_id: selectedOption?.id || null, // Log if option found
-                response_text: previousAnswer.response_text,
-              };
-              console.log(
-                `Matched option for question ID ${question.id}:`,
-                selectedOption
-              );
-            } else if (question.question_type === 'text') {
-              // For text-based questions, just use the response_text directly
-              question.previous_answer = {
-                selected_option_id: null,
-                response_text: previousAnswer.response_text,
-              };
-              console.log(
-                `Text response for question ID ${question.id}:`,
-                previousAnswer.response_text
-              );
-            }
-          } else {
-            question.previous_answer = null; // No previous answer for this question
-            console.log(
-              `No previous answer found for question ID ${question.id}`
-            );
-          }
-        });
-      }
+      // Process each question
+      quiz.questions = questions.map((question) =>
+        this.processQuestion(question, lastAttempt)
+      );
 
       res.status(200).json({ quiz });
     } catch (error) {
       console.error('Error fetching quiz:', error);
       res.status(500).json({ error: error.message });
     }
+  }
+
+  processQuestion(question, lastAttempt) {
+    const previousAnswer = lastAttempt?.find(
+      (answer) => answer.question_id === question.id
+    );
+
+    // Randomize options for specific question types
+    if (
+      question.question_type === 'match-pairs' ||
+      question.question_type === 'correct-order'
+    ) {
+      question.options = this.randomizeOptions(question.options);
+    }
+
+    // Attach user response
+    question.previous_answer = this.attachUserResponse(
+      question,
+      previousAnswer
+    );
+
+    return question;
+  }
+
+  randomizeOptions(options) {
+    const leftOptions = options.map((option) => ({
+      left_option_uuid: option.left_option_uuid,
+      left_option_text: option.left_option_text,
+    }));
+
+    const rightOptions = options.map((option) => ({
+      right_option_uuid: option.right_option_uuid,
+      right_option_text: option.right_option_text,
+    }));
+
+    return {
+      left_options: this.shuffleArray(leftOptions),
+      right_options: this.shuffleArray(rightOptions),
+    };
+  }
+
+  attachUserResponse(question, previousAnswer) {
+    if (!previousAnswer) {
+      return null;
+    }
+
+    switch (question.question_type) {
+      case 'multiple-choice':
+        return {
+          selected_option_ids: previousAnswer.selected_option_ids || [],
+        };
+
+      case 'true-false':
+        return {
+          selected_option_ids: previousAnswer.selected_option_ids || null,
+        };
+
+      case 'text':
+        return { answer_text: previousAnswer.response_text || '' };
+
+      case 'correct-order':
+        return { ordered_options: previousAnswer.ordered_options || [] };
+
+      case 'match-pairs':
+        return {
+          match_pairs: previousAnswer.match_pairs || [],
+        };
+
+      default:
+        return null;
+    }
+  }
+
+  shuffleArray(array) {
+    return array.sort(() => Math.random() - 0.5);
   }
 
   /**
@@ -759,6 +792,7 @@ class QuizController extends Controller {
       res.status(500).json({ message: 'Failed to fetch quiz responses' });
     }
   }
+
   formatUserResponses(responses) {
     const formatted = responses.reduce((acc, curr) => {
       const existingQuiz = acc.find(

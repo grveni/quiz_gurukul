@@ -124,7 +124,12 @@ class Quiz extends Model {
    * @returns {Object} - The quiz
    */
   async getQuizById(quizId) {
-    return this.queryClass.findById(quizId);
+    try {
+      return await this.queryClass.findById(quizId);
+    } catch (error) {
+      console.error(`Error fetching quiz with ID ${quizId}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -133,8 +138,14 @@ class Quiz extends Model {
    * @param {Number} userId - The ID of the user
    * @returns {Array} - List of user's previous answers (if any)
    */
+
   async getLastAttemptByUser(quizId, userId) {
-    return this.queryClass.getLastAttemptByUser(quizId, userId);
+    try {
+      return await this.queryClass.getLastAttemptByUser(quizId, userId);
+    } catch (error) {
+      console.error(`Error fetching last attempt for quiz ${quizId}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -152,8 +163,7 @@ class Quiz extends Model {
    */
   async listAllQuestions(quizId) {
     try {
-      const questions = await this.queryClass.findQuestionsByQuizId(quizId);
-      return questions;
+      return await this.queryClass.findQuestionsByQuizId(quizId);
     } catch (error) {
       console.error('Error in listAllQuestions:', error);
       throw error;

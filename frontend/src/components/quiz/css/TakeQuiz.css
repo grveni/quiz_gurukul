@@ -1,69 +1,97 @@
-/* Styling for question block */
+/* Ensure consistent font size and no bold text */
+body {
+  font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol';
+  font-size: 1rem; /* Set consistent base font size */
+  font-weight: 400; /* Remove bold by default */
+  line-height: 1.5;
+  color: #212529;
+  background-color: #fff;
+}
+
+/* Ensure label is not bold */
+label:not(.form-check-label):not(.custom-file-label) {
+  font-weight: normal !important; /* Override bold styling */
+}
+
+/* Consistent font size for question text */
 .question-block h3 {
-  font-weight: normal !important; /* Ensure question text is not bold */
-  font-size: 18px; /* Default font size for larger screens */
+  font-weight: normal;
+  font-size: 1rem; /* Match option font size */
+  margin-bottom: 10px;
+  word-wrap: break-word;
+}
+
+/* General styling for options */
+.option,
+.option-with-dropdown,
+.pair-option {
+  display: flex;
+  align-items: center;
   margin-bottom: 10px;
 }
 
-/* Responsive font size for question text */
+.option label,
+.option-with-dropdown label,
+.pair-option label {
+  font-size: 1rem; /* Match font size with question text */
+  font-weight: normal;
+  margin-left: 8px; /* Add spacing between input and label text */
+  word-wrap: break-word;
+}
+
+/* Input elements (checkbox, radio) styling */
+.option input[type='checkbox'],
+.option input[type='radio'] {
+  margin-right: 8px; /* Space between input and label */
+  transform: scale(1.2); /* Adjust size for better visibility */
+}
+
+/* Dropdown styling */
+.pair-option select,
+.option-with-dropdown select {
+  font-size: 1rem; /* Match question text */
+  padding: 5px;
+  width: 100%;
+  max-width: 200px;
+  font-weight: normal;
+  margin-left: 10px; /* Add spacing between dropdown and label */
+}
+
+/* Responsive adjustments */
 @media only screen and (max-width: 768px) {
-  .question-block h3 {
-    font-size: 16px !important; /* Slightly smaller on tablets */
+  .question-block h3,
+  .option label,
+  .pair-option select,
+  .option-with-dropdown select {
+    font-size: 0.9rem; /* Adjust font size for tablets */
   }
 }
 
 @media only screen and (max-width: 480px) {
-  .question-block h3 {
-    font-size: 16px !important; /* Smallest on mobile screens */
+  .question-block h3,
+  .option label,
+  .pair-option select,
+  .option-with-dropdown select {
+    font-size: 0.8rem; /* Adjust font size for smaller screens */
   }
-}
-
-/* Align radio buttons and text on the same line */
-.question-block input[type='radio'] {
-  margin-right: 8px; /* Space between radio button and text */
-}
-
-.question-block label {
-  font-weight: normal !important; /* Ensure option text is not bold */
-  font-size: 16px !important; /* Default option font size */
-  display: inline-block; /* Ensure label and input are inline */
-  vertical-align: middle; /* Align text vertically with radio button */
-  word-wrap: break-word; /* Wrap long text to next line if needed */
-  max-width: calc(100% - 20px); /* Ensure long text wraps correctly */
-}
-
-/* Responsive font size for option text */
-@media only screen and (max-width: 768px) {
-  .question-block label {
-    font-size: 14px !important; /* Slightly smaller on tablets */
-  }
-}
-
-@media only screen and (max-width: 480px) {
-  .question-block label {
-    font-size: 12px !important; /* Smallest on mobile screens */
-  }
-}
-
-/* Ensure the text and button align properly */
-.question-block div {
-  margin-bottom: 8px; /* Spacing between options */
-}
-
-/* Styling for the no-quiz message */
-.no-quiz-message {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 18px;
-  color: #555;
 }
 
 /* Button styling */
 button {
-  font-size: 16px;
+  font-size: 1rem;
   padding: 10px 20px;
   margin-top: 20px;
   cursor: pointer;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #0056b3;
 }
 
 /* Success and error messages */
@@ -75,70 +103,4 @@ button {
 .error-message {
   color: red;
   margin-top: 10px;
-}
-
-.option,
-.option-with-dropdown,
-.pair-option {
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-}
-
-.option-with-dropdown label,
-.pair-option label {
-  margin-right: 10px;
-  font-weight: 500;
-}
-
-.take-quiz .option {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.take-quiz .option input[type='checkbox'],
-.take-quiz .option input[type='radio'] {
-  margin-right: 10px; /* Adds space between the option button and text */
-}
-
-.take-quiz .option-with-dropdown {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.take-quiz .option-with-dropdown label {
-  margin-right: 10px; /* Adds space between the label and dropdown */
-}
-
-.take-quiz .option-with-dropdown select {
-  margin-left: 5px;
-  font-size: 16px; /* Match font size of other option text */
-  vertical-align: middle; /* Aligns dropdown text vertically with label */
-}
-
-.take-quiz .pair-option {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.take-quiz .pair-option label {
-  margin-right: 10px; /* Adds space between the label and dropdown */
-}
-
-.take-quiz .pair-option select {
-  margin-left: 5px;
-  font-size: 16px; /* Match font size of other option text */
-  vertical-align: middle; /* Aligns dropdown text vertically with label */
-}
-
-.option input[type='checkbox'],
-.option input[type='radio'],
-.option label,
-.option-with-dropdown label,
-.pair-option label {
-  font-size: 16px; /* Adjust to match option text size */
-  vertical-align: middle;
 }

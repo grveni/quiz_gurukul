@@ -277,9 +277,10 @@ export const getNextUntakenQuiz = async () => {
 
 export const submitQuizAnswers = async (quizId, answers) => {
   const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
+  console.log({ answers });
   const response = await axios.post(
     `${API_URL}/${quizId}/submit`,
-    { quizId, answers },
+    answers, // Directly include the answers array
     {
       headers: {
         Authorization: `Bearer ${token}`,
