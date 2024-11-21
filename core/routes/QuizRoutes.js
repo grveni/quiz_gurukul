@@ -233,7 +233,7 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.getNextUntakenQuiz(req, res)
     );
 
-    // Route to get results of all quizzes taken by the student
+    // Route to get results of the quiz taken by the student
     this.router.get(
       '/student/:quizId/results',
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),

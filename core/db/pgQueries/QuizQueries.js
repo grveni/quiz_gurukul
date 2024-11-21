@@ -608,36 +608,49 @@ class QuizQueries extends Query {
     try {
       const query = `
       SELECT 
-          q.id as question_id,
-          q.question_text,
-          q.question_type,
-          o.id as option_id,
-          o.option_text,
-          o.is_correct as option_correct,
-          r.response_text,
-          r.is_correct as response_correct,
-          g.left_option_uuid,
-          g.right_option_uuid
-      FROM 
-          responses r
-      INNER JOIN 
-          questions q ON r.question_id = q.id
-      LEFT JOIN 
-          options o ON o.question_id = q.id
-      LEFT JOIN 
-          responses_grid g ON g.attempt_id = r.attempt_id AND g.question_id = r.question_id
-      WHERE 
-          r.attempt_id = $1
-      ORDER BY 
-          q.id, o.id;
+    q.id AS question_id,
+    q.question_text,
+    q.question_type,
+    o.option_uuid AS option_id,
+    o.option_text,
+    o.is_correct AS correct_option, 
+    r.option_uuid AS selected_option_uuid,
+    r.response_text,
+    r.is_correct AS response_correct,
+    g.left_option_uuid,
+    g.left_option_text,
+    g.right_option_uuid,
+    rg.right_option_uuid AS selected_right_option_uuid,
+    rg.is_correct AS pair_response_correct,
+    g2.right_option_text AS selected_right_option_text
+FROM 
+    questions q
+LEFT JOIN 
+    options o ON o.question_id = q.id
+LEFT JOIN 
+    responses r ON r.question_id = q.id 
+                AND r.attempt_id = $1
+                AND r.option_uuid = o.option_uuid -- Match response with the specific option
+LEFT JOIN 
+    options_grid g ON g.question_id = q.id
+LEFT JOIN 
+    responses_grid rg ON rg.question_id = q.id 
+                      AND rg.attempt_id = $1 
+                      AND rg.left_option_uuid = g.left_option_uuid
+LEFT JOIN 
+    options_grid g2 ON g2.right_option_uuid = rg.right_option_uuid
+WHERE 
+    q.quiz_id = (SELECT quiz_id FROM quiz_attempts WHERE id = $1)
+ORDER BY 
+    q.id, o.id, g.left_option_uuid;
       `;
       const result = await db.query(query, [attemptId]);
 
       if (result.rowCount === 0) {
-        console.error(`No responses found for attempt ID: ${attemptId}`);
-        return null;
+        console.warn(`No responses found for attempt ID: ${attemptId}`);
+        return [];
       }
-
+      console.log(result.rows);
       return result.rows;
     } catch (error) {
       console.error('Error in getResponsesForAttempt:', error.message);

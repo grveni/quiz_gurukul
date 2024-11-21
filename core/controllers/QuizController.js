@@ -571,26 +571,32 @@ class QuizController extends Controller {
    * Fetch quiz results for a user based on the quiz ID and user ID
    * @param {Object} req - The request object
    * @param {Object} res - The response object
-   * @returns {void}
    */
   async getQuizResults(req, res) {
     try {
       const { quizId } = req.params;
       const userId = req.user.id;
+
       const quizResults = await Quiz.getQuizResultsForUser(userId, quizId);
 
       if (!quizResults) {
+        console.error(
+          `No quiz results found for user ID: ${userId}, quiz ID: ${quizId}`
+        );
         return res.status(404).json({ message: 'Quiz results not found' });
       }
-      const totalQuestions = quizResults.questions.length;
 
       res.status(200).json({
+        results: quizResults.results,
         score: quizResults.score,
-        percentScore: quizResults.percentage,
-        questions: quizResults.questions,
+        percentage: quizResults.percentage,
+        showCorrectAnswersEnabled: quizResults.percentage >= 60,
+        showCorrectAnswersTooltip:
+          'This button will be enabled only when your percentage is greater than or equal to 60%.',
       });
     } catch (error) {
-      this.handleError(res, error);
+      console.error('Error fetching quiz results:', error.message);
+      res.status(500).json({ message: 'Failed to fetch quiz results' });
     }
   }
 

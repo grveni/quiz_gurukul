@@ -14,21 +14,24 @@
 }
 
 .options {
-  list-style-type: disc;
+  list-style-type: none;
   padding-left: 20px;
 }
 
 .option {
   position: relative;
   padding: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.option label {
+  display: flex;
+  align-items: center;
 }
 
 .user-response {
   background-color: #d1ecf1; /* Lightest blue */
-}
-
-.correct-answer {
-  background-color: #d4edda; /* Lightest green */
 }
 
 .response-icon {
@@ -45,10 +48,26 @@
   margin-left: 10px;
 }
 
+.notice-message {
+  font-style: italic;
+  font-size: 0.85em;
+  text-align: center;
+  color: #6c757d;
+  margin-bottom: 15px;
+}
+
 .quiz-results {
   margin: 20px;
 }
 
 .actions {
-  margin-bottom: 20px; /* Add space between the buttons and the quiz questions */
+  margin-bottom: 20px;
+}
+
+input[type='radio']:checked {
+  accent-color: green; /* Custom radio button color for selected items */
+}
+
+.incorrect input[type='radio']:checked {
+  accent-color: red; /* Custom radio button color for incorrect items */
 }
