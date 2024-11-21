@@ -304,6 +304,17 @@ class QuizQueries extends Query {
         studentId,
         quizId
       );
+
+      // Handle empty submissions
+      if (answers.length === 0) {
+        console.warn(`User ${studentId} submitted an empty quiz.`);
+        const percentage = 0; // No answers provided
+
+        await this.updateQuizAttemptScore(client, quizAttemptId, 0, percentage);
+
+        await client.query('COMMIT');
+        return { quizAttemptId, score: 0, percentage };
+      }
       let score = 0;
 
       for (const answer of answers) {
@@ -322,7 +333,7 @@ class QuizQueries extends Query {
                 client,
                 quizAttemptId,
                 questionId,
-                answer
+                answer.selectedOptions
               );
             }
             break;
@@ -332,7 +343,7 @@ class QuizQueries extends Query {
                 client,
                 quizAttemptId,
                 questionId,
-                answer
+                answer.selectedOption
               );
             }
             break;
@@ -412,55 +423,48 @@ class QuizQueries extends Query {
   }
 
   // Process methods updated for empty checks
-  async processMultipleChoice(client, quizAttemptId, questionId, answer) {
-    if (!answer.selectedOptions.length) {
-      console.log(
-        `Skipping empty multiple-choice answer for questionId: ${questionId}`
+  async processMultipleChoice(client, attemptId, questionId, selectedOptions) {
+    let isCorrect = true; // Assume correct unless proven otherwise
+
+    for (const optionUuid of selectedOptions) {
+      const { rows } = await client.query(
+        `INSERT INTO responses (attempt_id, question_id, option_uuid, is_correct) 
+             SELECT $1, $2, option_uuid, is_correct FROM options WHERE option_uuid = $3
+             RETURNING is_correct`,
+        [attemptId, questionId, optionUuid]
       );
-      return false;
+
+      // Check if any of the selected options are incorrect
+      if (rows.length === 0 || rows[0].is_correct === false) {
+        isCorrect = false;
+      }
     }
 
-    const correctOptions = await client.query(
-      `SELECT id FROM options WHERE question_id = $1 AND is_correct = true`,
+    // Additional validation: ensure no correct options were missed
+    const { rows: correctOptions } = await client.query(
+      `SELECT COUNT(*) AS correct_count FROM options WHERE question_id = $1 AND is_correct = true`,
       [questionId]
     );
-    const correctOptionIds = correctOptions.rows.map((row) => row.id);
-    const isCorrect =
-      answer.selectedOptions.every((id) => correctOptionIds.includes(id)) &&
-      correctOptionIds.every((id) => answer.selectedOptions.includes(id));
 
-    for (const optionId of answer.selectedOptions) {
-      await client.query(
-        `INSERT INTO responses (attempt_id, question_id, option_id, is_correct) VALUES ($1, $2, $3, $4)`,
-        [quizAttemptId, questionId, optionId, isCorrect]
-      );
+    if (Number(correctOptions[0].correct_count) !== selectedOptions.length) {
+      isCorrect = false; // Mismatch between selected and correct options
     }
 
-    return isCorrect;
+    return isCorrect; // Return true if all selected options match the correct options
   }
 
-  async processTrueFalse(client, quizAttemptId, questionId, answer) {
-    if (!answer.selectedOption) {
-      console.log(
-        `Skipping empty true-false answer for questionId: ${questionId}`
-      );
-      return false;
-    }
+  async processTrueFalse(client, attemptId, questionId, selectedOption) {
+    if (!selectedOption) return false; // No selection is incorrect by default
 
-    const correctOption = await client.query(
-      `SELECT id FROM options WHERE question_id = $1 AND is_correct = true`,
-      [questionId]
-    );
-    const isCorrect =
-      correctOption.rows.length > 0 &&
-      correctOption.rows[0].id === answer.selectedOption;
-
-    await client.query(
-      `INSERT INTO responses (attempt_id, question_id, option_id, is_correct) VALUES ($1, $2, $3, $4)`,
-      [quizAttemptId, questionId, answer.selectedOption, isCorrect]
+    const { rows } = await client.query(
+      `INSERT INTO responses (attempt_id, question_id, option_uuid, is_correct) 
+       SELECT $1, $2, option_uuid, is_correct FROM options WHERE option_uuid = $3
+       RETURNING is_correct`,
+      [attemptId, questionId, selectedOption]
     );
 
-    return isCorrect;
+    // Return true if the selected option is correct
+    return rows.length > 0 && rows[0].is_correct === true;
   }
 
   // Helper method to process text questions
@@ -558,122 +562,86 @@ class QuizQueries extends Query {
     }
   }
 
-  // Helper 1: Fetch the latest quiz attempt
-  async getLatestQuizAttempt(userId, quizId) {
-    const query = `
-    SELECT 
-        id as attempt_id, 
-        score, 
-        percentage
-    FROM 
-        quiz_attempts
-    WHERE 
-        user_id = $1
-    AND 
-        quiz_id = $2
-    ORDER BY 
-        attempt_date DESC
-    LIMIT 1;
-  `;
-    const result = await db.query(query, [userId, quizId]);
-    if (result.rowCount === 0) {
-      console.error(
-        `No attempt found for user ID: ${userId} and quiz ID: ${quizId}`
-      );
-      return null;
-    }
-    return result.rows[0]; // Return the latest attempt
-  }
-
-  // Helper 2: Fetch responses for the given quiz attempt
-  async getResponsesForAttempt(attemptId) {
-    const query = `
-    SELECT 
-        q.id as question_id,
-        q.question_text,
-        q.question_type,
-        o.id as option_id,
-        o.option_text,
-        o.is_correct,
-        r.response_text as user_response,
-        r.is_correct as response_correct
-    FROM 
-        responses r
-    INNER JOIN 
-        questions q ON r.question_id = q.id
-    LEFT JOIN 
-        options o ON q.id = o.question_id
-    WHERE 
-        r.attempt_id = $1
-    ORDER BY 
-        q.id, o.id;
-  `;
-    const result = await db.query(query, [attemptId]);
-    if (result.rowCount === 0) {
-      console.error(`No responses found for attempt ID: ${attemptId}`);
-      return null;
-    }
-    return result.rows; // Return all responses for the attempt
-  }
   /**
-   * Fetch quiz results for a user based on the quiz ID and user ID
+   * Fetch the latest quiz attempt for a user
    * @param {Number} userId - The ID of the user
    * @param {Number} quizId - The ID of the quiz
-   * @returns {Object} - The quiz results including score, correct answers, and user responses
+   * @returns {Object|null} - Latest attempt details or null
    */
-  async getQuizResultsForUser(userId, quizId) {
+  async getLatestQuizAttempt(userId, quizId) {
     try {
-      // Get the latest quiz attempt
-      const latestAttempt = await this.getLatestQuizAttempt(userId, quizId);
-      if (!latestAttempt) {
-        return null; // No attempt found
+      const query = `
+      SELECT 
+          id as attempt_id, 
+          score, 
+          percentage
+      FROM 
+          quiz_attempts
+      WHERE 
+          user_id = $1 AND quiz_id = $2
+      ORDER BY 
+          attempt_date DESC
+      LIMIT 1;
+    `;
+      const result = await db.query(query, [userId, quizId]);
+
+      if (result.rowCount === 0) {
+        console.error(
+          `No quiz attempts found for user ID: ${userId}, quiz ID: ${quizId}`
+        );
+        return null;
       }
 
-      const { attempt_id, score, percentage } = latestAttempt; // Destructure attempt_id and score
-
-      // Get responses for the quiz attempt
-      const responses = await this.getResponsesForAttempt(attempt_id);
-      if (!responses) {
-        return null; // No responses found
-      }
-
-      // Build the question map with options and responses
-      const questionsMap = new Map();
-
-      responses.forEach((row) => {
-        const questionId = row.question_id;
-        if (!questionsMap.has(questionId)) {
-          questionsMap.set(questionId, {
-            id: questionId,
-            question_text: row.question_text,
-            question_type: row.question_type,
-            options: [],
-            user_response: row.user_response,
-            response_correct: row.response_correct,
-          });
-        }
-
-        if (row.option_id) {
-          questionsMap.get(questionId).options.push({
-            id: row.option_id,
-            option_text: row.option_text,
-            is_correct: row.is_correct,
-          });
-        }
-      });
-
-      // Convert the map back to an array
-      const questions = Array.from(questionsMap.values());
-
-      // Return the final results structure with the same format as before
-      return {
-        questions,
-        score,
-        percentage,
-      };
+      return result.rows[0];
     } catch (error) {
-      console.error('Error fetching quiz results:', error);
-      throw new Error('Failed to fetch quiz results');
+      console.error('Error in getLatestQuizAttempt:', error.message);
+      throw new Error('Failed to fetch latest quiz attempt');
+    }
+  }
+
+  /**
+   * Fetch responses for a specific quiz attempt
+   * @param {Number} attemptId - The ID of the quiz attempt
+   * @returns {Array|null} - Responses for the attempt or null
+   */
+  async getResponsesForAttempt(attemptId) {
+    try {
+      const query = `
+      SELECT 
+          q.id as question_id,
+          q.question_text,
+          q.question_type,
+          o.id as option_id,
+          o.option_text,
+          o.is_correct as option_correct,
+          r.response_text,
+          r.is_correct as response_correct,
+          g.left_option_uuid,
+          g.right_option_uuid
+      FROM 
+          responses r
+      INNER JOIN 
+          questions q ON r.question_id = q.id
+      LEFT JOIN 
+          options o ON o.question_id = q.id
+      LEFT JOIN 
+          responses_grid g ON g.attempt_id = r.attempt_id AND g.question_id = r.question_id
+      WHERE 
+          r.attempt_id = $1
+      ORDER BY 
+          q.id, o.id;
+      `;
+      const result = await db.query(query, [attemptId]);
+
+      if (result.rowCount === 0) {
+        console.error(`No responses found for attempt ID: ${attemptId}`);
+        return null;
+      }
+
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getResponsesForAttempt:', error.message);
+      throw new Error('Failed to fetch responses for attempt');
     }
   }
 

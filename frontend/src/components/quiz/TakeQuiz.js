@@ -63,17 +63,18 @@ const TakeQuiz = () => {
     fetchQuiz();
   }, [quizId]);
 
-  const handleOptionChange = (questionId, optionId, questionType) => {
+  const handleOptionChange = (questionId, optionUuid, questionType) => {
     const updatedAnswers = answers.map((answer) =>
       answer.questionId === questionId
         ? {
             ...answer,
             answer:
-              questionType === 'multiple-choice'
-                ? answer.answer.includes(optionId)
-                  ? answer.answer.filter((id) => id !== optionId)
-                  : [...answer.answer, optionId]
-                : optionId,
+              questionType === 'multiple-choice' ||
+              questionType === 'true-false'
+                ? answer.answer.includes(optionUuid)
+                  ? answer.answer.filter((uuid) => uuid !== optionUuid)
+                  : [...answer.answer, optionUuid]
+                : optionUuid,
           }
         : answer
     );
@@ -143,9 +144,17 @@ const TakeQuiz = () => {
           const { questionId, questionType, optionPairs } = answer;
 
           if (questionType === 'multiple-choice') {
-            return { questionId, questionType, selectedOptions: answer.answer };
+            return {
+              questionId,
+              questionType,
+              selectedOptions: answer.answer, // Now sending UUIDs
+            };
           } else if (questionType === 'true-false') {
-            return { questionId, questionType, selectedOption: answer.answer };
+            return {
+              questionId,
+              questionType,
+              selectedOption: answer.answer, // Now sending UUID
+            };
           } else if (questionType === 'text') {
             return { questionId, questionType, answerText: answer.answer };
           } else if (
@@ -191,24 +200,24 @@ const TakeQuiz = () => {
 
             {question.question_type === 'multiple-choice' &&
               question.options.map((option) => (
-                <div key={option.id} className="option">
+                <div key={option.option_uuid} className="option">
                   <input
                     type="checkbox"
-                    id={`option-${option.id}`}
+                    id={`option-${option.option_uuid}`}
                     name={`question-${question.id}`}
-                    value={option.id}
+                    value={option.option_uuid}
                     checked={answers
                       .find((ans) => ans.questionId === question.id)
-                      .answer.includes(option.id)}
+                      .answer.includes(option.option_uuid)}
                     onChange={() =>
                       handleOptionChange(
                         question.id,
-                        option.id,
+                        option.option_uuid,
                         question.question_type
                       )
                     }
                   />
-                  <label htmlFor={`option-${option.id}`}>
+                  <label htmlFor={`option-${option.option_uuid}`}>
                     {option.option_text}
                   </label>
                 </div>
@@ -216,25 +225,25 @@ const TakeQuiz = () => {
 
             {question.question_type === 'true-false' &&
               question.options.map((option) => (
-                <div key={option.id} className="option">
+                <div key={option.option_uuid} className="option">
                   <input
                     type="radio"
-                    id={`option-${option.id}`}
+                    id={`option-${option.option_uuid}`}
                     name={`question-${question.id}`}
-                    value={option.id}
+                    value={option.option_uuid}
                     checked={
                       answers.find((ans) => ans.questionId === question.id)
-                        .answer === option.id
+                        .answer === option.option_uuid
                     }
                     onChange={() =>
                       handleOptionChange(
                         question.id,
-                        option.id,
+                        option.option_uuid,
                         question.question_type
                       )
                     }
                   />
-                  <label htmlFor={`option-${option.id}`}>
+                  <label htmlFor={`option-${option.option_uuid}`}>
                     {option.option_text}
                   </label>
                 </div>
