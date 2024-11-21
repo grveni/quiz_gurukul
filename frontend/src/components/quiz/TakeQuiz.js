@@ -35,7 +35,7 @@ const TakeQuiz = () => {
                 question.question_type === 'multiple-choice'
                   ? previousAnswer.selected_option_ids || []
                   : question.question_type === 'true-false'
-                  ? previousAnswer.selected_option_ids || ''
+                  ? previousAnswer.selected_option_id || ''
                   : question.question_type === 'text'
                   ? previousAnswer.answer_text || ''
                   : null,
@@ -69,12 +69,13 @@ const TakeQuiz = () => {
         ? {
             ...answer,
             answer:
-              questionType === 'multiple-choice' ||
-              questionType === 'true-false'
+              questionType === 'multiple-choice'
                 ? answer.answer.includes(optionUuid)
                   ? answer.answer.filter((uuid) => uuid !== optionUuid)
                   : [...answer.answer, optionUuid]
-                : optionUuid,
+                : questionType === 'true-false'
+                ? optionUuid // Directly assign the selected UUID for true/false
+                : answer.answer,
           }
         : answer
     );
@@ -233,7 +234,7 @@ const TakeQuiz = () => {
                     value={option.option_uuid}
                     checked={
                       answers.find((ans) => ans.questionId === question.id)
-                        .answer === option.option_uuid
+                        ?.answer === option.option_uuid
                     }
                     onChange={() =>
                       handleOptionChange(
