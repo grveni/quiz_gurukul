@@ -110,6 +110,12 @@ const Layout = ({ role }) => {
     setDrawerOpen(!drawerOpen);
   };
 
+  const handleMenuItemClick = () => {
+    if (isMobile || isTablet) {
+      setDrawerOpen(false); // Close the drawer after a menu item is clicked
+    }
+  };
+
   const renderSidebar = () => (
     <nav className="mt-2">
       <List
@@ -119,7 +125,13 @@ const Layout = ({ role }) => {
         data-accordion="false"
       >
         {links.map((link) => (
-          <ListItem button component={Link} to={link.path} key={link.text}>
+          <ListItem
+            button
+            component={Link}
+            to={link.path}
+            key={link.text}
+            onClick={handleMenuItemClick} // Close the drawer here
+          >
             <ListItemIcon>{link.icon}</ListItemIcon>
             <ListItemText primary={link.text} />
           </ListItem>
