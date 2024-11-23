@@ -33,20 +33,28 @@ const TakeQuiz = () => {
               questionType: question.question_type,
               answer:
                 question.question_type === 'multiple-choice'
-                  ? previousAnswer.selected_option_ids || []
+                  ? previousAnswer.selected_option_ids?.filter(Boolean) || [] // Remove nulls
                   : question.question_type === 'true-false'
-                  ? previousAnswer.selected_option_id || ''
+                  ? previousAnswer.selected_option_ids?.[0] || '' // Handle single value
                   : question.question_type === 'text'
                   ? previousAnswer.answer_text || ''
                   : null,
               optionPairs:
                 (question.question_type === 'match-pairs' ||
                   question.question_type === 'correct-order') &&
-                question.options.left_options.map((leftOption, index) => ({
-                  leftUUID: leftOption.left_option_uuid,
-                  rightUUID:
-                    previousAnswer.optionPairs?.[index]?.rightUUID || '',
-                })),
+                question.options.left_options
+                  .map((leftOption) => {
+                    const pair =
+                      previousAnswer.option_pairs?.find(
+                        (p) => p.leftUUID === leftOption.left_option_uuid
+                      ) || {};
+                    if (!pair.rightUUID) return null; // Skip if rightUUID is null/empty
+                    return {
+                      leftUUID: leftOption.left_option_uuid,
+                      rightUUID: pair.rightUUID,
+                    };
+                  })
+                  .filter(Boolean), // Remove null pairs
             };
           });
 
@@ -108,11 +116,8 @@ const TakeQuiz = () => {
             quiz.questions.find((q) => q.id === questionId).options
               .left_options[index].left_option_uuid;
 
-          // Ensure rightUUID is a string
           const rightUUID =
-            typeof selectedUuid === 'string'
-              ? selectedUuid
-              : selectedUuid?.rightUUID || '';
+            typeof selectedUuid === 'string' ? selectedUuid : '';
 
           console.log('Mapping OptionPair:', { leftUUID, rightUUID });
 
@@ -148,13 +153,13 @@ const TakeQuiz = () => {
             return {
               questionId,
               questionType,
-              selectedOptions: answer.answer, // Now sending UUIDs
+              selectedOptions: answer.answer, // Send UUIDs
             };
           } else if (questionType === 'true-false') {
             return {
               questionId,
               questionType,
-              selectedOption: answer.answer, // Now sending UUID
+              selectedOption: answer.answer, // Send UUID
             };
           } else if (questionType === 'text') {
             return { questionId, questionType, answerText: answer.answer };
@@ -165,13 +170,9 @@ const TakeQuiz = () => {
             return {
               questionId,
               questionType,
-              optionPairs: optionPairs.map(({ leftUUID, rightUUID }) => ({
-                leftUUID,
-                rightUUID:
-                  typeof rightUUID === 'object'
-                    ? rightUUID.rightUUID
-                    : rightUUID,
-              })),
+              optionPairs: optionPairs.filter(
+                (pair) => pair.leftUUID && pair.rightUUID // Skip invalid pairs
+              ),
             };
           }
           return null;
