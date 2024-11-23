@@ -24,6 +24,25 @@
   padding: 5px;
 }
 
+.text-response textarea {
+  width: 100%;
+  min-height: 50px;
+  resize: none;
+  margin-top: 5px;
+}
+
+.actions {
+  margin-bottom: 20px;
+}
+
+.correct-answer-row {
+  background-color: #e9f7ef; /* Light green for correct answers */
+  border-top: 1px solid #c3e6cb;
+  color: #155724; /* Dark green text */
+  padding: 8px;
+  font-style: italic;
+}
+
 .match-pairs-table {
   width: 100%;
   border-collapse: collapse;
@@ -37,30 +56,33 @@
   text-align: left;
 }
 
-.match-pairs-table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
-}
-
 .none-selected {
   color: #6c757d;
   font-style: italic;
 }
 
-.text-response textarea {
-  width: 100%;
-  min-height: 50px;
-  resize: none;
-  margin-top: 5px;
+.response-icon.correct-icon {
+  color: green;
+  margin-left: 5px;
+  font-size: 1.2em;
 }
 
-.actions {
-  margin-bottom: 20px;
+.text-response-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.text-response-table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  vertical-align: top;
 }
 
 @media (max-width: 768px) {
   .match-pairs-table th,
-  .match-pairs-table td {
+  .match-pairs-table td,
+  .text-response-table td {
     font-size: 0.9em;
   }
 

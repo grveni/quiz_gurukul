@@ -720,7 +720,8 @@ ORDER BY
           -- Fetch correct pairs for match-pairs and correct-order
           json_agg(DISTINCT jsonb_build_object(
             'left_option_uuid', g.left_option_uuid,
-            'right_option_uuid', g.right_option_uuid
+            'right_option_uuid', g.right_option_uuid,
+            'right_option_text', g.right_option_text
           )) FILTER (WHERE g.left_option_uuid IS NOT NULL) AS correct_pairs,
           -- Fetch correct text for text-based questions
           o.option_text AS correct_text

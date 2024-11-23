@@ -26,23 +26,31 @@ const QuizResults = () => {
   }, [quizId]);
 
   const handleFetchCorrectAnswers = async () => {
-    try {
-      const correctAnswers = await getCorrectAnswers(quizId);
+    if (showCorrectAnswers) {
+      // Hide correct answers
+      setShowCorrectAnswers(false);
       setResults((prevResults) => ({
         ...prevResults,
-        correctAnswers, // Merge correct answers into results
+        correctAnswers: null, // Clear correct answers data
       }));
-      setShowCorrectAnswers(true); // Enable correct answers display
-    } catch (error) {
-      console.error('Error fetching correct answers:', error);
+    } else {
+      try {
+        const correctAnswers = await getCorrectAnswers(quizId);
+        setResults((prevResults) => ({
+          ...prevResults,
+          correctAnswers, // Merge correct answers into results
+        }));
+        setShowCorrectAnswers(true); // Enable correct answers display
+      } catch (error) {
+        console.error('Error fetching correct answers:', error);
 
-      // Display specific error messages based on the status code
-      if (error.message.includes('403')) {
-        setError(
-          'Unauthorized or score is below 60%. Correct answers not available.'
-        );
-      } else {
-        setError('Failed to fetch correct answers.');
+        if (error.message.includes('403')) {
+          setError(
+            'Unauthorized or score is below 60%. Correct answers not available.'
+          );
+        } else {
+          setError('Failed to fetch correct answers.');
+        }
       }
     }
   };
@@ -91,65 +99,86 @@ const QuizResults = () => {
 
       case 'text':
         return (
-          <div>
-            <p>User Response:</p>
-            <textarea
-              className="response-text"
-              value={question.userResponse?.[0] || ''}
-              readOnly
-              placeholder="No response"
-            ></textarea>
-            {showCorrectAnswers && correctAnswer && (
-              <p className="correct-answer">
-                Correct Answer: {correctAnswer.correctText}
-              </p>
-            )}
-          </div>
+          <table className="text-response-table">
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Your Answer:</strong>
+                </td>
+                <td>
+                  <textarea
+                    className="response-text"
+                    value={question.userResponse?.[0] || ''}
+                    readOnly
+                    placeholder="None Provided"
+                  ></textarea>
+                </td>
+              </tr>
+              {showCorrectAnswers && (
+                <tr className="correct-answer-row">
+                  <td colSpan={2}>
+                    <strong>Correct Answer:</strong>{' '}
+                    {correctAnswer?.correctText || 'N/A'}{' '}
+                    {correctAnswer?.correctText && (
+                      <span className="response-icon correct-icon">✔️</span>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         );
 
       case 'match-pairs':
       case 'correct-order':
         return (
-          <ul className="options">
-            {question.options.map(({ leftUUID, leftText, userSelected }) => {
-              const correctPair = correctAnswer?.correctAnswers?.find(
-                (pair) => pair.left_option_uuid === leftUUID
-              );
+          <table className="match-pairs-table">
+            <thead>
+              <tr>
+                <th>Left Option</th>
+                <th>Your Answer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {question.options.map(({ leftUUID, leftText, userSelected }) => {
+                const correctPair = correctAnswer?.correctAnswers?.find(
+                  (pair) => pair.left_option_uuid === leftUUID
+                );
 
-              const isCorrect =
-                correctPair &&
-                correctPair.right_option_uuid === userSelected?.rightUUID;
+                const isCorrect =
+                  correctPair &&
+                  correctPair.right_option_uuid === userSelected?.rightUUID;
 
-              return (
-                <li
-                  key={leftUUID}
-                  className={`option ${
-                    userSelected ? 'user-response' : ''
-                  } ßßß`}
-                >
-                  <strong>{leftText}</strong> →{' '}
-                  <select className="dropdown" disabled>
-                    <option value="" selected={!userSelected}>
-                      None Selected
-                    </option>
-                    {userSelected && (
-                      <option value={userSelected.rightUUID} selected>
-                        {userSelected.rightText}
-                      </option>
+                return (
+                  <React.Fragment key={leftUUID}>
+                    <tr>
+                      <td>{leftText}</td>
+                      <td>
+                        {userSelected ? (
+                          <span>{userSelected.rightText}</span>
+                        ) : (
+                          <span className="none-selected">None Selected</span>
+                        )}
+                      </td>
+                    </tr>
+                    {showCorrectAnswers && (
+                      <tr className="correct-answer-row">
+                        <td colSpan={2}>
+                          <strong>Correct Answer:</strong>{' '}
+                          {correctPair?.right_option_text || 'None'}{' '}
+                          {correctPair?.right_option_text && (
+                            <span className="response-icon correct-icon">
+                              ✔️
+                            </span>
+                          )}
+                        </td>
+                      </tr>
                     )}
-                  </select>
-                  {showCorrectAnswers && !isCorrect && correctPair && (
-                    <div className="correct-answer">
-                      Correct answer: {correctPair.right_option_text}
-                    </div>
-                  )}
-                  {showCorrectAnswers && isCorrect && (
-                    <span className="response-icon correct-icon">✔️</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         );
 
       default:
