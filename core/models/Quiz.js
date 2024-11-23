@@ -333,7 +333,10 @@ class Quiz extends Model {
         if (row.selected_option_uuid) {
           question.userResponse.push(row.selected_option_uuid);
         }
-        if (row.correct_option === true && !row.selected_option_uuid) {
+        if (
+          (row.correct_option === true && !row.selected_option_uuid) ||
+          (row.correct_option === false && row.selected_option_uuid)
+        ) {
           // A correct option was not selected, so the response is incorrect
           question.responseCorrect = false;
         } else if (row.is_correct === false) {
@@ -396,6 +399,42 @@ class Quiz extends Model {
     });
 
     return Array.from(questionsMap.values());
+  }
+
+  /**
+   * Validate if the attempt belongs to the logged-in user
+   * @param {Number} userId - The ID of the user
+   * @param {Number} attemptId - The ID of the attempt
+   * @returns {Object|null} - Quiz and attempt details or null if unauthorized
+   */
+  async validateAttemptOwnership(userId, attemptId) {
+    try {
+      return await this.queryClass.validateAttemptOwnership(userId, attemptId);
+    } catch (error) {
+      console.error(
+        `Error validating attempt ownership for userId: ${userId}, attemptId: ${attemptId}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch correct answers for a quiz attempt
+   * @param {Number} quizId - The ID of the quiz
+   * @param {Number} attemptId - The ID of the attempt
+   * @returns {Array} - List of correct answers structured by question type
+   */
+  async getCorrectAnswers(quizId, attemptId) {
+    try {
+      return await this.queryClass.getCorrectAnswers(quizId, attemptId);
+    } catch (error) {
+      console.error(
+        `Error fetching correct answers for quizId: ${quizId}, attemptId: ${attemptId}`,
+        error
+      );
+      throw error;
+    }
   }
 
   /**

@@ -192,36 +192,60 @@ class QuizQueries extends Query {
 
       const result = await db.query(
         `
-        WITH latest_attempt AS (
-          SELECT 
-            id 
-          FROM 
-            quiz_attempts 
-          WHERE 
-            quiz_id = $1 AND user_id = $2 
-          ORDER BY 
-            attempt_date DESC 
-          LIMIT 1
-        )
-        SELECT 
-          r.question_id, 
-          r.response_text 
-        FROM 
-          responses r
-        INNER JOIN 
-          latest_attempt la
-        ON 
-          r.attempt_id = la.id
-        `,
+      WITH latest_attempt AS (
+  SELECT 
+    id 
+  FROM 
+    quiz_attempts 
+  WHERE 
+    quiz_id = $1 AND user_id = $2 
+  ORDER BY 
+    attempt_date DESC 
+  LIMIT 1
+)
+SELECT 
+  q.id AS question_id, 
+  q.question_type,
+  -- For multiple-choice and true-false
+  json_agg(DISTINCT r.option_uuid) FILTER (WHERE q.question_type IN ('multiple-choice', 'true-false')) AS selected_option_ids,
+  -- For text
+  MAX(CASE WHEN q.question_type = 'text' THEN r.response_text ELSE NULL END) AS answer_text,
+  -- For match-pairs and correct-order user responses
+  json_agg(jsonb_build_object(
+    'leftUUID', rg.left_option_uuid,
+    'rightUUID', rg.right_option_uuid
+  )) FILTER (WHERE q.question_type IN ('match-pairs', 'correct-order')) AS user_option_pairs,
+  -- For match-pairs and correct-order correct answers with text
+  json_agg(jsonb_build_object(
+    'leftUUID', og.left_option_uuid,
+    'rightUUID', og.right_option_uuid,
+    'rightText', og.right_option_text
+  )) FILTER (WHERE q.question_type IN ('match-pairs', 'correct-order')) AS correct_option_pairs
+FROM 
+  questions q
+-- Responses for multiple-choice, true-false, and text questions
+LEFT JOIN 
+  responses r ON q.id = r.question_id AND r.attempt_id = (SELECT id FROM latest_attempt)
+-- Responses for match-pairs and correct-order questions
+LEFT JOIN 
+  responses_grid rg ON q.id = rg.question_id AND rg.attempt_id = (SELECT id FROM latest_attempt)
+-- Correct options for match-pairs and correct-order questions
+LEFT JOIN 
+  options_grid og ON q.id = og.question_id
+WHERE 
+  q.quiz_id = $1
+GROUP BY 
+  q.id, q.question_type;`,
         [quizId, userId]
       );
+
       console.log('Fetched user responses:', result.rows);
 
       if (result.rowCount === 0) {
         console.log(
           `No attempt found for quizId: ${quizId}, userId: ${userId}`
         );
-        return null;
+        return [];
       }
 
       return result.rows;
@@ -630,7 +654,10 @@ LEFT JOIN
 LEFT JOIN 
     responses r ON r.question_id = q.id 
                 AND r.attempt_id = $1
-                AND r.option_uuid = o.option_uuid -- Match response with the specific option
+                AND (
+                    (q.question_type IN ('multiple-choice', 'true-false') AND r.option_uuid = o.option_uuid)
+                    OR q.question_type = 'text'
+                ) -- Allow text questions to match without option_uuid
 LEFT JOIN 
     options_grid g ON g.question_id = q.id
 LEFT JOIN 
@@ -643,6 +670,7 @@ WHERE
     q.quiz_id = (SELECT quiz_id FROM quiz_attempts WHERE id = $1)
 ORDER BY 
     q.id, o.id, g.left_option_uuid;
+
       `;
       const result = await db.query(query, [attemptId]);
 
@@ -659,84 +687,75 @@ ORDER BY
   }
 
   /**
-   * Get quiz results including user responses and correct answers
+   * Validate if an attempt belongs to a specific user
+   * @param {Number} userId - The ID of the user
+   * @param {Number} attemptId - The ID of the attempt
+   * @returns {Object|null} - Quiz and attempt details or null if unauthorized
+   */
+  async validateAttemptOwnership(userId, attemptId) {
+    const query = `
+    SELECT qa.quiz_id
+    FROM quiz_attempts qa
+    INNER JOIN quizzes q ON qa.quiz_id = q.id
+    WHERE qa.id = $1 AND qa.user_id = $2
+  `;
+    const result = await db.query(query, [attemptId, userId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Get correct answers for a specific quiz if latest attempt if score >= 60%
    * @param {Number} quizId - The ID of the quiz
    * @param {Number} attemptId - The ID of the quiz attempt
-   * @returns {Array} - The list of questions with options and user responses
+   * @returns {Object|null} - Correct answers or null if the percentage is less than 60
    */
-  async getQuizResults(quizId, attemptId) {
+  async getCorrectAnswers(quizId, attemptId) {
     try {
-      const questionsResult = await db.query(
-        `
+      const query = `
         SELECT 
-          q.id as question_id, 
-          q.question_text, 
-          q.question_type, 
-          q.created_at, 
-          q.updated_at, 
-          o.id as option_id, 
-          o.option_text, 
-          o.is_correct,
-          r.response_text,
-          r.is_correct as response_correct
+          q.id AS question_id,
+          q.question_type,
+          -- Fetch correct options for multiple-choice and true-false
+          json_agg(DISTINCT o.option_uuid) FILTER (WHERE o.option_uuid IS NOT NULL) AS correct_options,
+          -- Fetch correct pairs for match-pairs and correct-order
+          json_agg(DISTINCT jsonb_build_object(
+            'left_option_uuid', g.left_option_uuid,
+            'right_option_uuid', g.right_option_uuid
+          )) FILTER (WHERE g.left_option_uuid IS NOT NULL) AS correct_pairs,
+          -- Fetch correct text for text-based questions
+          o.option_text AS correct_text
         FROM 
-          questions q 
-        INNER JOIN 
-          options o 
-        ON 
-          q.id = o.question_id 
-        LEFT JOIN
-          responses r
-        ON 
-          q.id = r.question_id AND r.attempt_id = $2
+          questions q
+        LEFT JOIN 
+          options o ON q.id = o.question_id AND o.is_correct = true
+        LEFT JOIN 
+          options_grid g ON q.id = g.question_id
         WHERE 
           q.quiz_id = $1 AND q.deleted = false
-      `,
-        [quizId, attemptId]
-      );
+        GROUP BY 
+          q.id, q.question_type, o.option_text;
+      `;
 
-      if (questionsResult.rowCount === 0) {
-        console.error(`No questions or options found for quiz ID: ${quizId}`);
-        return null;
+      const result = await db.query(query, [quizId]);
+
+      if (result.rowCount === 0) {
+        console.error(`No correct answers found for quiz ID: ${quizId}`);
+        return [];
       }
 
-      const questionsMap = new Map();
-
-      questionsResult.rows.forEach((row) => {
-        const questionId = row.question_id;
-        if (!questionsMap.has(questionId)) {
-          questionsMap.set(questionId, {
-            id: questionId,
-            question_text: row.question_text,
-            question_type: row.question_type,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            options: [],
-            user_response: row.response_text,
-            response_correct: row.response_correct,
-          });
-        }
-
-        if (row.option_id) {
-          questionsMap.get(questionId).options.push({
-            id: row.option_id,
-            option_text: row.option_text,
-            is_correct: row.is_correct,
-          });
-        }
-      });
-
-      const questions = Array.from(questionsMap.values());
-
-      console.log(
-        'Final Questions with responses, correct answers:',
-        questions
-      );
-
-      return questions;
+      return result.rows.map((row) => ({
+        questionId: row.question_id,
+        questionType: row.question_type,
+        correctAnswers:
+          row.question_type === 'match-pairs' ||
+          row.question_type === 'correct-order'
+            ? row.correct_pairs
+            : row.correct_options,
+        correctText: row.question_type === 'text' ? row.correct_text : null,
+      }));
     } catch (error) {
-      console.error('Error fetching questions:', error);
-      throw new Error('Failed to fetch questions');
+      console.error('Error fetching correct answers:', error.message);
+      throw new Error('Failed to fetch correct answers');
     }
   }
 

@@ -251,6 +251,14 @@ class QuizRoutes extends Route {
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
       (req, res) => QuizController.getStudentNewQuizzes(req, res)
     );
+    // Route to fetch correct answers for a student's attempt
+    this.router.get(
+      '/student/:quizId/correctAnswers',
+      AuthMiddleware.verifyToken, // Authenticate the user
+      (req, res, next) =>
+        AuthMiddleware.authorizeRoles('student')(req, res, next), // Ensure the role is 'student'
+      (req, res) => QuizController.getCorrectAnswers(req, res)
+    );
   }
 }
 

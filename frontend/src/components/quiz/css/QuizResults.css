@@ -1,73 +1,70 @@
 .correct {
-  background-color: #d4edda; /* Lightest green */
+  background-color: #d4edda; /* Light green */
   border: 1px solid #c3e6cb;
 }
 
 .incorrect {
-  background-color: #f8d7da; /* Lightest red */
+  background-color: #f8d7da; /* Light red */
   border: 1px solid #f5c6cb;
 }
 
 .question-block {
   padding: 10px;
   margin-bottom: 15px;
+  border-radius: 5px;
 }
 
 .options {
   list-style-type: none;
-  padding-left: 20px;
+  padding-left: 0;
 }
 
 .option {
-  position: relative;
+  margin: 5px 0;
   padding: 5px;
-  display: flex;
-  align-items: center;
 }
 
-.option label {
-  display: flex;
-  align-items: center;
+.match-pairs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
 }
 
-.user-response {
-  background-color: #d1ecf1; /* Lightest blue */
+.match-pairs-table th,
+.match-pairs-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
 }
 
-.response-icon {
-  margin-left: 10px;
+.match-pairs-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
 }
 
-.correct-icon {
-  color: green;
-  margin-left: 10px;
-}
-
-.incorrect-icon {
-  color: red;
-  margin-left: 10px;
-}
-
-.notice-message {
-  font-style: italic;
-  font-size: 0.85em;
-  text-align: center;
+.none-selected {
   color: #6c757d;
-  margin-bottom: 15px;
+  font-style: italic;
 }
 
-.quiz-results {
-  margin: 20px;
+.text-response textarea {
+  width: 100%;
+  min-height: 50px;
+  resize: none;
+  margin-top: 5px;
 }
 
 .actions {
   margin-bottom: 20px;
 }
 
-input[type='radio']:checked {
-  accent-color: green; /* Custom radio button color for selected items */
-}
+@media (max-width: 768px) {
+  .match-pairs-table th,
+  .match-pairs-table td {
+    font-size: 0.9em;
+  }
 
-.incorrect input[type='radio']:checked {
-  accent-color: red; /* Custom radio button color for incorrect items */
+  .question-block {
+    padding: 8px;
+  }
 }

@@ -623,6 +623,57 @@ class QuizController extends Controller {
     }
   }
 
+  /**
+   * Fetch correct answers for a specific attempt
+   * @param {Object} req - The request object containing attempt ID
+   * @param {Object} res - The response object to send data
+   */
+  async getCorrectAnswers(req, res) {
+    try {
+      const { quizId } = req.params;
+      const userId = req.user.id; // Extract user ID from the token
+
+      console.log(
+        `Fetching correct answers for quizId: ${quizId}, userId: ${userId}`
+      ); // Debug log
+
+      // Step 1: Fetch the latest attempt for the quiz and user
+      const attemptDetails = await Quiz.getLatestQuizAttempt(userId, quizId);
+
+      if (!attemptDetails) {
+        return res
+          .status(403)
+          .json({ message: 'No valid attempt found for this quiz.' });
+      }
+
+      // Step 2: Check if the score is sufficient to fetch correct answers
+      if (attemptDetails.percentage < 60) {
+        return res.status(403).json({
+          message:
+            'Correct answers are only available for scores equal to or above 60%.',
+        });
+      }
+
+      // Step 3: Fetch correct answers
+      const correctAnswers = await Quiz.getCorrectAnswers(
+        quizId,
+        attemptDetails.attempt_id
+      );
+
+      if (!correctAnswers || correctAnswers.length === 0) {
+        return res
+          .status(404)
+          .json({ message: 'No correct answers found for this quiz.' });
+      }
+
+      console.log(`Correct answers fetched successfully:`, correctAnswers);
+      res.status(200).json(correctAnswers);
+    } catch (error) {
+      console.error('Error fetching correct answers:', error.message);
+      res.status(500).json({ message: 'Failed to fetch correct answers.' });
+    }
+  }
+
   async updateQuizStatus(req, res) {
     const { quizId } = req.params;
     const { is_active } = req.body;
@@ -731,24 +782,21 @@ class QuizController extends Controller {
 
     switch (question.question_type) {
       case 'multiple-choice':
+      case 'true-false':
         return {
           selected_option_ids: previousAnswer.selected_option_ids || [],
         };
 
-      case 'true-false':
+      case 'text':
         return {
-          selected_option_ids: previousAnswer.selected_option_ids || null,
+          answer_text: previousAnswer.answer_text || '',
         };
 
-      case 'text':
-        return { answer_text: previousAnswer.response_text || '' };
-
       case 'correct-order':
-        return { ordered_options: previousAnswer.ordered_options || [] };
-
       case 'match-pairs':
+        console.log(previousAnswer);
         return {
-          match_pairs: previousAnswer.match_pairs || [],
+          option_pairs: previousAnswer.user_option_pairs || [],
         };
 
       default:

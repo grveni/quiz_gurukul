@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getQuizResults } from '../../utils/QuizAPI';
+import { getQuizResults, getCorrectAnswers } from '../../utils/QuizAPI';
 import './css/QuizResults.css';
 
 const QuizResults = () => {
@@ -25,46 +25,67 @@ const QuizResults = () => {
     fetchResults();
   }, [quizId]);
 
+  const handleFetchCorrectAnswers = async () => {
+    try {
+      const correctAnswers = await getCorrectAnswers(quizId);
+      setResults((prevResults) => ({
+        ...prevResults,
+        correctAnswers, // Merge correct answers into results
+      }));
+      setShowCorrectAnswers(true); // Enable correct answers display
+    } catch (error) {
+      console.error('Error fetching correct answers:', error);
+
+      // Display specific error messages based on the status code
+      if (error.message.includes('403')) {
+        setError(
+          'Unauthorized or score is below 60%. Correct answers not available.'
+        );
+      } else {
+        setError('Failed to fetch correct answers.');
+      }
+    }
+  };
+
   const renderOptions = (question) => {
-    console.log('Rendering options for question:', question); // Debug log
+    const correctAnswer =
+      showCorrectAnswers &&
+      results.correctAnswers?.find((q) => q.questionId === question.questionId);
 
     switch (question.questionType) {
       case 'multiple-choice':
+      case 'true-false':
         return (
           <ul className="options">
-            {question.options.map((option) => (
-              <li
-                key={option.optionUUID}
-                className={`option ${
-                  option.userSelected ? 'user-response' : ''
-                }`}
-              >
-                <label>
-                  <input
-                    type="radio"
-                    disabled
-                    checked={option.userSelected || false}
-                  />
-                  {option.optionText}
-                </label>
-                {option.userSelected && (
-                  <span
-                    className={`response-icon ${
-                      question.responseCorrect
-                        ? 'correct-icon'
-                        : 'incorrect-icon'
-                    }`}
-                  >
-                    {question.responseCorrect ? '✔️' : '❌'}
-                  </span>
-                )}
-              </li>
-            ))}
-            {!question.userResponse.length && (
-              <li className="option none-selected">
-                User Response: None Selected
-              </li>
-            )}
+            {question.options.map((option) => {
+              const isCorrect = correctAnswer?.correctAnswers?.includes(
+                option.optionUUID
+              );
+              return (
+                <li
+                  key={option.optionUUID}
+                  className={`option ${
+                    option.userSelected
+                      ? question.responseCorrect
+                        ? 'correct'
+                        : 'incorrect'
+                      : ''
+                  } ${showCorrectAnswers && isCorrect ? 'correct' : ''}`}
+                >
+                  <label>
+                    <input
+                      type="radio"
+                      disabled
+                      checked={option.userSelected || false}
+                    />
+                    {option.optionText}{' '}
+                    {showCorrectAnswers && isCorrect && (
+                      <span className="response-icon correct-icon">✔️</span>
+                    )}
+                  </label>
+                </li>
+              );
+            })}
           </ul>
         );
 
@@ -78,46 +99,12 @@ const QuizResults = () => {
               readOnly
               placeholder="No response"
             ></textarea>
+            {showCorrectAnswers && correctAnswer && (
+              <p className="correct-answer">
+                Correct Answer: {correctAnswer.correctText}
+              </p>
+            )}
           </div>
-        );
-
-      case 'true-false':
-        return (
-          <ul className="options">
-            {question.options.map((option) => (
-              <li
-                key={option.optionUUID}
-                className={`option ${
-                  option.userSelected
-                    ? question.responseCorrect
-                      ? 'correct'
-                      : 'incorrect'
-                    : ''
-                }`}
-              >
-                <label>
-                  <input
-                    type="radio"
-                    name={`question-${question.questionId}`} // Group by question
-                    checked={option.userSelected || false} // Pre-select the user's choice
-                    disabled // Display only
-                  />
-                  {option.optionText}
-                </label>
-                {option.userSelected && (
-                  <span
-                    className={`response-icon ${
-                      question.responseCorrect
-                        ? 'correct-icon'
-                        : 'incorrect-icon'
-                    }`}
-                  >
-                    {question.responseCorrect ? '✔️' : '❌'}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
         );
 
       case 'match-pairs':
@@ -125,27 +112,40 @@ const QuizResults = () => {
         return (
           <ul className="options">
             {question.options.map(({ leftUUID, leftText, userSelected }) => {
-              console.log(
-                `Left Option: ${leftText}, Selected Right Option: ${
-                  userSelected?.rightText || 'None'
-                }`
-              ); // Debug log
+              const correctPair = correctAnswer?.correctAnswers?.find(
+                (pair) => pair.left_option_uuid === leftUUID
+              );
+
+              const isCorrect =
+                correctPair &&
+                correctPair.right_option_uuid === userSelected?.rightUUID;
 
               return (
-                <li key={leftUUID} className="option">
+                <li
+                  key={leftUUID}
+                  className={`option ${
+                    userSelected ? 'user-response' : ''
+                  } ßßß`}
+                >
                   <strong>{leftText}</strong> →{' '}
                   <select className="dropdown" disabled>
-                    {/* Default "None Selected" option */}
                     <option value="" selected={!userSelected}>
                       None Selected
                     </option>
-                    {/* Display the user-selected option directly */}
                     {userSelected && (
                       <option value={userSelected.rightUUID} selected>
                         {userSelected.rightText}
                       </option>
                     )}
                   </select>
+                  {showCorrectAnswers && !isCorrect && correctPair && (
+                    <div className="correct-answer">
+                      Correct answer: {correctPair.right_option_text}
+                    </div>
+                  )}
+                  {showCorrectAnswers && isCorrect && (
+                    <span className="response-icon correct-icon">✔️</span>
+                  )}
                 </li>
               );
             })}
@@ -182,7 +182,7 @@ const QuizResults = () => {
       <div className="actions">
         <button
           disabled={!results.showCorrectAnswersEnabled}
-          onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}
+          onClick={handleFetchCorrectAnswers}
         >
           {showCorrectAnswers ? 'Hide Correct Answers' : 'Show Correct Answers'}
         </button>

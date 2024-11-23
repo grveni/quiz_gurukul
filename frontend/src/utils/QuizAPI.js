@@ -304,6 +304,29 @@ export const getQuizResults = async (quizId) => {
   return response.data;
 };
 
+/**
+ * Fetch correct answers for a student's latest attempt
+ * @param {string} quizId - The ID of the quiz
+ * @returns {Object} - Correct answers for the attempt
+ */
+export const getCorrectAnswers = async (quizId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${API_URL}/student/${quizId}/correctAnswers`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching correct answers:', error);
+    throw new Error(
+      error.response?.data?.error || 'Failed to fetch correct answers.'
+    );
+  }
+};
+
 export const updateQuizStatus = async (quizId, isActive) => {
   const token = localStorage.getItem('token');
   try {
