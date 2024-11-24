@@ -934,11 +934,16 @@ GROUP BY
   }
 
   // Helper method to insert multiple-choice or true-false options
+  //defaults to false if ui sends no true options.
   async insertOptions(client, questionId, options) {
     for (const option of options) {
       await client.query(
         `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)`,
-        [questionId, option.option_text, option.is_correct]
+        [
+          questionId,
+          option.option_text,
+          option.is_correct === true ? true : false,
+        ]
       );
     }
     console.log(
