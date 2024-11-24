@@ -235,6 +235,7 @@ class QuizController extends Controller {
         typeof pair.right_option_text !== 'string' ||
         !pair.right_option_text.trim()
       ) {
+        console.log('pair', pair);
         return false;
       }
     }
@@ -373,6 +374,7 @@ class QuizController extends Controller {
 
   /**
    * List all questions in a specific quiz
+   * Called by student (to take quiz) and admin (to update or add questions)
    * @param {Object} req - The request object
    * @param {Object} res - The response object
    * @returns {void}
@@ -380,13 +382,106 @@ class QuizController extends Controller {
   async listAllQuestions(req, res) {
     try {
       const { quizId } = req.params;
+
+      // Fetch all questions for the quiz
       const questions = await Quiz.listAllQuestions(quizId);
-      console.log(questions);
-      res.status(200).json({ questions });
+
+      if (!questions || questions.length === 0) {
+        return res
+          .status(404)
+          .json({ message: 'No questions found for this quiz.' });
+      }
+
+      console.log('Questions:', questions);
+
+      // Fetch correct answers for the quiz
+      const correctAnswers = await Quiz.getCorrectAnswers(quizId);
+
+      if (!correctAnswers || correctAnswers.length === 0) {
+        return res
+          .status(404)
+          .json({ message: 'No correct answers found for this quiz.' });
+      }
+
+      console.log('Correct answers fetched successfully:', correctAnswers);
+
+      // Attach correct answers to questions
+      const questionsWithAnswers = this.attachCorrectAnswers(
+        questions,
+        correctAnswers
+      );
+
+      res.status(200).json({ questions: questionsWithAnswers });
     } catch (error) {
       console.error('Error fetching questions:', error);
       res.status(500).json({ message: 'Failed to fetch questions' });
     }
+  }
+
+  /**
+   * Attach correct answers to their respective questions
+   * @param {Array} questions - The list of questions
+   * @param {Array} correctAnswers - The list of correct answers
+   * @returns {Array} Questions with correct answers attached
+   */
+  attachCorrectAnswers(questions, correctAnswers) {
+    return questions.map((question) => {
+      const correctAnswer = correctAnswers.find(
+        (answer) => answer.questionId === question.id
+      );
+
+      if (!correctAnswer) {
+        return question; // No correct answer, return the question as is
+      }
+
+      const {
+        questionType,
+        correctAnswers: answers,
+        correctText,
+      } = correctAnswer;
+
+      // Attach the correct answers based on the question type
+      switch (questionType) {
+        case 'multiple-choice':
+        case 'true-false':
+          return {
+            ...question,
+            options: question.options.map((option) => ({
+              ...option,
+              is_correct: answers.includes(option.option_uuid),
+            })),
+          };
+
+        case 'text':
+          return {
+            ...question,
+            correct_text: correctText,
+            is_correct: true,
+          };
+
+        case 'correct-order':
+          return {
+            ...question,
+            options: question.options.map((option, index) => ({
+              ...option,
+              option_text: option.left_option_text, // Use left_option_text as option_text
+              is_correct: true, // Correct order always marked as correct
+            })),
+          };
+        case 'match-pairs':
+          return {
+            ...question,
+            options: question.options.map((option, index) => ({
+              ...option,
+              is_correct: true,
+            })),
+          };
+
+        default:
+          console.warn(`Unknown question type: ${questionType}`);
+          return question;
+      }
+    });
   }
 
   /**
@@ -655,10 +750,7 @@ class QuizController extends Controller {
       }
 
       // Step 3: Fetch correct answers
-      const correctAnswers = await Quiz.getCorrectAnswers(
-        quizId,
-        attemptDetails.attempt_id
-      );
+      const correctAnswers = await Quiz.getCorrectAnswers(quizId);
 
       if (!correctAnswers || correctAnswers.length === 0) {
         return res

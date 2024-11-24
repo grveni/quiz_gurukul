@@ -422,15 +422,14 @@ class Quiz extends Model {
   /**
    * Fetch correct answers for a quiz attempt
    * @param {Number} quizId - The ID of the quiz
-   * @param {Number} attemptId - The ID of the attempt
    * @returns {Array} - List of correct answers structured by question type
    */
-  async getCorrectAnswers(quizId, attemptId) {
+  async getCorrectAnswers(quizId) {
     try {
-      return await this.queryClass.getCorrectAnswers(quizId, attemptId);
+      return await this.queryClass.getCorrectAnswers(quizId);
     } catch (error) {
       console.error(
-        `Error fetching correct answers for quizId: ${quizId}, attemptId: ${attemptId}`,
+        `Error fetching correct answers for quizId: ${quizId}`,
         error
       );
       throw error;

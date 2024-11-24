@@ -194,7 +194,7 @@ const QuizDetails = () => {
       }
       setQuestions(newQuestions);
     } else {
-      setError('Multiple-choice questions must have at least one option.');
+      setError('Questions must have at least one option.');
     }
   };
 
@@ -407,6 +407,14 @@ const QuizDetails = () => {
                     required
                     disabled={question.deleted}
                   />
+                  {!question.deleted && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOption(index, oIndex)}
+                    >
+                      Delete Option
+                    </button>
+                  )}
                 </div>
               ))}
               {!question.deleted && (
@@ -436,6 +444,7 @@ const QuizDetails = () => {
                     required
                     disabled={question.deleted}
                   />
+
                   <input
                     type="text"
                     placeholder="Right Option"
@@ -451,6 +460,14 @@ const QuizDetails = () => {
                     required
                     disabled={question.deleted}
                   />
+                  {!question.deleted && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOption(index, oIndex)}
+                    >
+                      Delete Option
+                    </button>
+                  )}
                 </div>
               ))}
               {!question.deleted && (

@@ -706,35 +706,35 @@ ORDER BY
   /**
    * Get correct answers for a specific quiz if latest attempt if score >= 60%
    * @param {Number} quizId - The ID of the quiz
-   * @param {Number} attemptId - The ID of the quiz attempt
    * @returns {Object|null} - Correct answers or null if the percentage is less than 60
    */
-  async getCorrectAnswers(quizId, attemptId) {
+  async getCorrectAnswers(quizId) {
     try {
       const query = `
-        SELECT 
-          q.id AS question_id,
-          q.question_type,
-          -- Fetch correct options for multiple-choice and true-false
-          json_agg(DISTINCT o.option_uuid) FILTER (WHERE o.option_uuid IS NOT NULL) AS correct_options,
-          -- Fetch correct pairs for match-pairs and correct-order
-          json_agg(DISTINCT jsonb_build_object(
-            'left_option_uuid', g.left_option_uuid,
-            'right_option_uuid', g.right_option_uuid,
-            'right_option_text', g.right_option_text
-          )) FILTER (WHERE g.left_option_uuid IS NOT NULL) AS correct_pairs,
-          -- Fetch correct text for text-based questions
-          o.option_text AS correct_text
-        FROM 
-          questions q
-        LEFT JOIN 
-          options o ON q.id = o.question_id AND o.is_correct = true
-        LEFT JOIN 
-          options_grid g ON q.id = g.question_id
-        WHERE 
-          q.quiz_id = $1 AND q.deleted = false
-        GROUP BY 
-          q.id, q.question_type, o.option_text;
+       SELECT 
+  q.id AS question_id,
+  q.question_type,
+  -- Fetch correct options for multiple-choice and true-false
+  json_agg(DISTINCT o.option_uuid) FILTER (WHERE o.option_uuid IS NOT NULL) AS correct_options,
+  -- Fetch correct pairs for match-pairs and correct-order
+  json_agg(DISTINCT jsonb_build_object(
+    'left_option_uuid', g.left_option_uuid,
+    'right_option_uuid', g.right_option_uuid,
+    'right_option_text', g.right_option_text
+  )) FILTER (WHERE g.left_option_uuid IS NOT NULL) AS correct_pairs,
+  -- Fetch correct text for text-based questions
+  MAX(o.option_text) FILTER (WHERE q.question_type = 'text') AS correct_text
+FROM 
+  questions q
+LEFT JOIN 
+  options o ON q.id = o.question_id AND o.is_correct = true
+LEFT JOIN 
+  options_grid g ON q.id = g.question_id
+WHERE 
+  q.quiz_id = $1 AND q.deleted = false
+GROUP BY 
+  q.id, q.question_type;
+
       `;
 
       const result = await db.query(query, [quizId]);
