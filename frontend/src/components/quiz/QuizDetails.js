@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Select, MenuItem } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { getQuiz, updateQuiz, listAllQuestions } from '../../utils/QuizAPI';
+import './css/UpdateQuiz.css';
 
 const QuizDetails = () => {
   const { quizId } = useParams();
@@ -493,7 +494,9 @@ const QuizDetails = () => {
           </ul>
         </div>
       )}
-      <button onClick={handleUpdateQuiz}>Update Quiz</button>
+      <button type="submit" onClick={handleUpdateQuiz}>
+        Update Quiz
+      </button>
     </div>
   );
 };

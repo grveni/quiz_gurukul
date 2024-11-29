@@ -1,0 +1,9 @@
+/* Styling for the Update Quiz button */
+/* Ensure the submit button is always visible */
+button[type='submit'] {
+  position: fixed;
+  bottom: 70px;
+  right: 55px; /* Space from the right edge of the viewport */
+  z-index: 1000; /* Ensure it appears above other content */
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Add slight elevation */
+}
