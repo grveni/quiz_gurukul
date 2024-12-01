@@ -3,27 +3,11 @@ import axios from 'axios';
 const BASE_URL =
   process.env.REACT_APP_API_USERS_URL || 'http://localhost:5001/api/users';
 
-// Fetch the current user's profile
-/*export const getUserProfile = async () => {
-  try {
-    const response = await axios.get(`${BASE_URL}/user/profile`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`, // Assuming JWT authentication
-      },
-    });
-    return response.data;
-  } catch (error) {
-    throw new Error(
-      error.response?.data?.message || 'Error fetching user profile'
-    );
-  }
-};*/
-
 // Change the user's password
-export const changePassword = async (passwordData) => {
+export const changeUserPassword = async (passwordData) => {
   const token = localStorage.getItem('token');
   const response = await axios.put(
-    `{BASE_URL}/me/change-password`,
+    `${BASE_URL}/me/change-password`,
     {
       currentPassword: passwordData.currentPassword,
       newPassword: passwordData.newPassword,
@@ -49,16 +33,6 @@ export const updateUserProfile = async (userDetails) => {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
-};
-
-// Mock API call to change password
-export const changeUserPassword = async (passwordData) => {
-  // Simulate password change success
-  if (passwordData.currentPassword === 'wrongpassword') {
-    // Simulate error if the current password is incorrect
-    throw new Error('Current password is incorrect');
-  }
-  return { success: true, message: 'Password changed successfully' };
 };
 
 // Simulate fetching users

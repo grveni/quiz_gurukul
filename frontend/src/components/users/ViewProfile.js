@@ -10,15 +10,15 @@ import { useNavigate } from 'react-router-dom';
 const ViewProfile = () => {
   const [formFields, setFormFields] = useState([]);
   const [formData, setFormData] = useState({});
-  const [showPasswordForm, setShowPasswordForm] = useState(false); // State to toggle password change form
+  const [showPasswordForm, setShowPasswordForm] = useState(false); // Toggle for password form
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [passwordError, setPasswordError] = useState(''); // Error state for password change
+  const [passwordError, setPasswordError] = useState(''); // Password error state
   const [globalErrors, setGlobalErrors] = useState([]);
-  const [editMode, setEditMode] = useState(true); // Set true for enabling edits
+  const [editMode, setEditMode] = useState(true); // Profile edit mode
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,7 +30,7 @@ const ViewProfile = () => {
           return;
         }
 
-        // Fetch config for fields
+        // Fetch config for user fields
         const config = await fetchConfig(token);
         const formFieldsConfig = config.fields || config.data?.fields || {};
 
@@ -39,7 +39,7 @@ const ViewProfile = () => {
 
         // Filter out password field from formFields
         const filteredFields = Object.keys(formFieldsConfig)
-          .filter((key) => key !== 'password') // Remove password from the fields
+          .filter((key) => key !== 'password') // Exclude password field
           .map((key) => ({
             name: key,
             ...formFieldsConfig[key],
@@ -58,7 +58,7 @@ const ViewProfile = () => {
     fetchInitialData();
   }, [navigate]);
 
-  // Handle change in the form fields
+  // Handle change in the profile fields
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -67,7 +67,7 @@ const ViewProfile = () => {
     });
   };
 
-  // Handle change in password fields
+  // Handle change in the password fields
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData({
@@ -76,37 +76,71 @@ const ViewProfile = () => {
     });
   };
 
-  // Submit the updated user information
+  // Update profile information
   const handleUpdateInfo = async () => {
     try {
-      await updateUserProfile(formData); // Update user profile API call
+      await updateUserProfile(formData); // API call to update profile
       alert('Profile updated successfully');
     } catch (error) {
       alert('Error updating profile');
     }
   };
 
-  // Submit the password change
+  // Validate and send password change request
   const handlePasswordSubmit = async () => {
-    setPasswordError(''); // Reset error before submitting
+    console.log('Password submit clicked');
+    console.log('Current Password Data:', passwordData);
+
+    setPasswordError(''); // Clear existing errors
+
+    // Validate password inputs
+    if (!passwordData.currentPassword) {
+      console.log('Validation failed: Current password is required');
+      setPasswordError('Current password is required');
+      return;
+    }
+    if (!passwordData.newPassword) {
+      console.log('Validation failed: New password is required');
+      setPasswordError('New password is required');
+      return;
+    }
+    if (passwordData.newPassword.length < 8) {
+      console.log(
+        'Validation failed: New password must be at least 8 characters long'
+      );
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
+      console.log('Validation failed: New passwords do not match');
       setPasswordError('New passwords do not match');
       return;
     }
+
     try {
+      console.log('Sending request to change password');
+      // API call to change password
       const result = await changeUserPassword({
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
-      }); // Change password API call
-      alert(result.message); // Display success message from backend
-      setShowPasswordForm(false); // Hide the password form after successful change
+      });
+      console.log('Password change response:', result);
+      alert(result.message || 'Password changed successfully');
+      setShowPasswordForm(false); // Hide the password form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }); // Reset password fields
     } catch (error) {
+      console.error('Error changing password:', error);
       setPasswordError(
         error.response?.data?.error || 'Error changing password'
-      ); // Show backend error message
+      ); // Show server error
     }
   };
 
+  // Render input fields dynamically based on configuration
   const renderInputField = (field) => {
     const { name, form } = field;
     const { type, placeholder, options } = form;
@@ -139,7 +173,7 @@ const ViewProfile = () => {
           placeholder={placeholder}
           value={formData[name] || ''}
           onChange={handleInputChange}
-          readOnly={!editMode} // Make fields editable when not in view-only mode
+          readOnly={!editMode} // Disable input if not in edit mode
         />
       </div>
     );
@@ -149,16 +183,20 @@ const ViewProfile = () => {
     <div className="form-container">
       <h1>View Profile</h1>
 
-      {/* Change Password Link */}
+      {/* Toggle Password Change Form */}
       <a
         href="#"
-        onClick={() => setShowPasswordForm(!showPasswordForm)}
+        onClick={(e) => {
+          e.preventDefault();
+          console.log('Toggle Password Form Clicked');
+          setShowPasswordForm(!showPasswordForm);
+        }}
         style={{ textDecoration: 'underline', cursor: 'pointer' }}
       >
         Change Password
       </a>
 
-      {/* Render Password Form */}
+      {/* Password Form */}
       {showPasswordForm && (
         <div
           className="password-form"
@@ -212,6 +250,7 @@ const ViewProfile = () => {
         </button>
       </form>
 
+      {/* Display Global Errors */}
       {globalErrors.length > 0 && (
         <div className="error-message">
           {globalErrors.map((error, index) => (
