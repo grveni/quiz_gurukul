@@ -29,4 +29,23 @@ router.get(
   }
 );
 
+router.get(
+  '/me/profile',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+  (req, res) => UserController.getUserProfile(req, res)
+);
+
+// Route to update user profile
+router.put(
+  '/me/profile',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+  (req, res) => UserController.updateUserProfile(req, res)
+);
+
+router.put(
+  '/me/change-password',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res) => UserController.changePassword(req, res) // Call controller method
+);
+
 module.exports = router;

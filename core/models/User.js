@@ -49,6 +49,65 @@ class User extends Model {
       throw new Error('Error fetching usernames');
     }
   }
+  async getUserProfile(userId) {
+    try {
+      const profile = await this.queryClass.fetchUserProfile(userId);
+      if (!profile) {
+        throw new Error('User not found');
+      }
+      return profile;
+    } catch (err) {
+      console.error('Error in User.getUserProfile:', err.message);
+      throw err;
+    }
+  }
+
+  async updateUserProfile(userId, userDetails) {
+    try {
+      const success = await this.queryClass.updateUserProfile(
+        userId,
+        userDetails
+      );
+      if (!success) {
+        throw new Error('Failed to update user profile');
+      }
+      return 'Profile updated successfully';
+    } catch (err) {
+      console.error('Error in User.updateUserProfile:', err.message);
+      throw err;
+    }
+  }
+  async changePassword(userId, currentPassword, newPassword) {
+    try {
+      const user = await this.queryClass.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const isMatch = await this.queryClass.comparePassword(
+        currentPassword,
+        user.password
+      );
+      if (!isMatch) {
+        return { error: 'Current password is incorrect' };
+      }
+
+      const hashedPassword = await this.queryClass.hashPassword(newPassword);
+      const updated = await this.queryClass.updatePassword(
+        userId,
+        hashedPassword
+      );
+
+      if (!updated) {
+        throw new Error('Failed to update password');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in User.changePassword:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new User();

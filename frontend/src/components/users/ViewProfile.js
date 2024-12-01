@@ -34,7 +34,7 @@ const ViewProfile = () => {
         const config = await fetchConfig(token);
         const formFieldsConfig = config.fields || config.data?.fields || {};
 
-        // Fetch user profile (mocked for now)
+        // Fetch user profile
         const userProfile = await getUserProfile();
 
         // Filter out password field from formFields
@@ -46,7 +46,7 @@ const ViewProfile = () => {
           }));
 
         setFormFields(filteredFields);
-        setFormData(userProfile); // Populate form with hardcoded user data
+        setFormData(userProfile); // Populate form with user data
       } catch (err) {
         setGlobalErrors((prevErrors) => [
           ...prevErrors,
@@ -94,11 +94,16 @@ const ViewProfile = () => {
       return;
     }
     try {
-      const result = await changeUserPassword(passwordData); // Change password API call
+      const result = await changeUserPassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      }); // Change password API call
       alert(result.message); // Display success message from backend
       setShowPasswordForm(false); // Hide the password form after successful change
     } catch (error) {
-      setPasswordError(error.message); // Show backend error message
+      setPasswordError(
+        error.response?.data?.error || 'Error changing password'
+      ); // Show backend error message
     }
   };
 
@@ -194,8 +199,7 @@ const ViewProfile = () => {
               required
             />
           </div>
-          {passwordError && <p className="error-message">{passwordError}</p>}{' '}
-          {/* Show password error */}
+          {passwordError && <p className="error-message">{passwordError}</p>}
           <button onClick={handlePasswordSubmit}>Submit</button>
         </div>
       )}

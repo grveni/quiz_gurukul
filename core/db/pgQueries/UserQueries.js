@@ -96,6 +96,61 @@ class UserQueries extends Query {
       throw new Error('Failed to fetch usernames');
     }
   }
+
+  async fetchUserProfile(userId) {
+    const query = `
+      SELECT id, username, email, phone, flat_no, building_name, parent_name, standard, mother_name
+      FROM users
+      WHERE id = $1;
+    `;
+    const result = await db.query(query, [userId]);
+    return result.rows[0];
+  }
+
+  async updateUserProfile(userId, userDetails) {
+    const query = `
+      UPDATE users
+      SET username = $2,
+          email = $3,
+          phone = $4,
+          flat_no = $5,
+          building_name = $6,
+          parent_name = $7,
+          standard = $8,
+          mother_name = $9,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1;
+    `;
+    const values = [
+      userId,
+      userDetails.username,
+      userDetails.email,
+      userDetails.phone,
+      userDetails.flat_no,
+      userDetails.building_name,
+      userDetails.parent_name,
+      userDetails.standard,
+      userDetails.mother_name,
+    ];
+    const result = await db.query(query, values);
+    return result.rowCount > 0;
+  }
+
+  async updatePassword(userId, hashedPassword) {
+    const query = `
+      UPDATE users
+      SET password = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1;
+    `;
+    const result = await db.query(query, [userId, hashedPassword]);
+    return result.rowCount > 0;
+  }
+
+  async hashPassword(password) {
+    const bcrypt = require('bcryptjs');
+    const saltRounds = 10;
+    return bcrypt.hash(password, saltRounds);
+  }
 }
 
 module.exports = new UserQueries();
