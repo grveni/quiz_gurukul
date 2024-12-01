@@ -451,8 +451,16 @@ class Quiz extends Model {
    * @param {Number} userId - The ID of the user
    * @returns {Array} - List of active quizzes
    */
-  async getUserActiveQuizzes(userId) {
-    return this.queryClass.getUserActiveQuizzes(userId);
+  async getUserActiveQuizzes(userId, includeArchived) {
+    try {
+      return await this.queryClass.getUserActiveQuizzes(
+        userId,
+        includeArchived
+      );
+    } catch (error) {
+      console.error('Error in getUserActiveQuizzes:', error);
+      throw new Error('Failed to fetch user active quizzes');
+    }
   }
 
   /**
@@ -480,8 +488,25 @@ class Quiz extends Model {
       throw new Error('Invalid type parameter');
     }
   }
-  async getUnattemptedQuizzes(userId) {
-    return this.queryClass.getUnattemptedQuizzes(userId);
+  async getUnattemptedQuizzes(userId, includeArchived) {
+    try {
+      return await this.queryClass.getUnattemptedQuizzes(
+        userId,
+        includeArchived
+      );
+    } catch (error) {
+      console.error('Error in getUnattemptedQuizzes:', error);
+      throw new Error('Failed to fetch unattempted quizzes');
+    }
+  }
+
+  async toggleArchiveStatus(userId, quizId, archive) {
+    try {
+      return await this.queryClass.toggleArchiveStatus(userId, quizId, archive);
+    } catch (error) {
+      console.error('Error in toggleArchiveStatus:', error);
+      throw new Error('Failed to update archive status');
+    }
   }
 }
 

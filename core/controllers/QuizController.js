@@ -787,16 +787,16 @@ class QuizController extends Controller {
     }
   }
 
-  async getStudentQuizzes(req, res) {
+  async getStudentAttemptedQuizzes(req, res) {
     const userId = req.user.id;
-    console.log('get student active quizzes', userId);
+    const { includeArchived = false } = req.query; // Accept query parameter for archived quizzes
     try {
-      const quizzes = await Quiz.getUserActiveQuizzes(userId);
-
-      console.log('quizzes', quizzes);
+      const quizzes = await Quiz.getUserActiveQuizzes(userId, includeArchived);
+      console.log(quizzes);
       res.json(quizzes);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('Error fetching student quizzes:', error);
+      res.status(500).json({ error: 'Failed to fetch student quizzes' });
     }
   }
 
@@ -1037,14 +1037,31 @@ class QuizController extends Controller {
     }
   }
   async getStudentNewQuizzes(req, res) {
+    const userId = req.user.id;
+    const { includeArchived = false } = req.query; // Accept query parameter for archived quizzes
     try {
-      const userId = req.user.id; // Extract the user ID from the token
-      const newQuizzes = await Quiz.getUnattemptedQuizzes(userId);
-      console.log('New Quizzes: ', newQuizzes);
-      return res.status(200).json({ quizzes: newQuizzes });
+      const newQuizzes = await Quiz.getUnattemptedQuizzes(
+        userId,
+        includeArchived
+      );
+      res.status(200).json({ quizzes: newQuizzes });
     } catch (error) {
       console.error('Error fetching new quizzes:', error);
-      return res.status(500).json({ error: 'Failed to fetch new quizzes' });
+      res.status(500).json({ error: 'Failed to fetch new quizzes' });
+    }
+  }
+
+  async toggleQuizArchiveStatus(req, res) {
+    const userId = req.user.id;
+    const { quizId } = req.body;
+    const { archive } = req.body; // Expect a boolean value for `archive`
+
+    try {
+      const result = await Quiz.toggleArchiveStatus(userId, quizId, archive);
+      res.status(200).json({ message: result });
+    } catch (error) {
+      console.error('Error toggling quiz archive status:', error);
+      res.status(500).json({ error: 'Failed to update archive status' });
     }
   }
 }

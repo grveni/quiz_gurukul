@@ -423,7 +423,7 @@ GROUP BY
   // Fetch total number of questions for a quiz
   async getTotalQuestions(client, quizId) {
     const totalQuestionsResult = await client.query(
-      `SELECT COUNT(*) as total_questions FROM questions WHERE quiz_id = $1`,
+      `SELECT COUNT(*) as total_questions FROM questions WHERE quiz_id = $1 AND deleted = false`,
       [quizId]
     );
     return parseInt(totalQuestionsResult.rows[0].total_questions);
@@ -667,7 +667,7 @@ LEFT JOIN
 LEFT JOIN 
     options_grid g2 ON g2.right_option_uuid = rg.right_option_uuid
 WHERE 
-    q.quiz_id = (SELECT quiz_id FROM quiz_attempts WHERE id = $1)
+    q.quiz_id = (SELECT quiz_id FROM quiz_attempts WHERE id = $1) AND q.deleted = false
 ORDER BY 
     q.id, o.id, g.left_option_uuid;
 
@@ -870,19 +870,25 @@ GROUP BY
    * @param {Number} userId - The ID of the user
    * @returns {Array} - List of active quizzes
    */
-  async getUserActiveQuizzes(userId) {
-    const result = await db.query(
-      `SELECT q.* 
-       FROM quizzes q
-       JOIN (
-         SELECT quiz_id
-         FROM quiz_attempts
-         WHERE user_id = $1
-         GROUP BY quiz_id
-       ) qa ON q.id = qa.quiz_id
-       WHERE q.is_active = true`,
-      [userId]
-    );
+  async getUserActiveQuizzes(userId, includeArchived) {
+    console.log(userId, includeArchived);
+    const query = `
+      SELECT 
+    q.*, 
+    COALESCE(uaq.archived, FALSE) AS is_archived
+FROM quizzes q
+JOIN (
+    SELECT quiz_id
+    FROM quiz_attempts
+    WHERE user_id = $1
+    GROUP BY quiz_id
+) qa ON q.id = qa.quiz_id
+LEFT JOIN user_archived_quizzes uaq
+    ON q.id = uaq.quiz_id AND uaq.user_id = $1
+WHERE q.is_active = TRUE 
+  AND ($2::boolean OR COALESCE(uaq.archived, FALSE) IS NOT TRUE);`;
+
+    const result = await db.query(query, [userId, includeArchived]);
     console.log(result.rows);
     return result.rows;
   }
@@ -1122,15 +1128,28 @@ GROUP BY
     return result.rows;
   }
 
-  async getUnattemptedQuizzes(userId) {
+  async getUnattemptedQuizzes(userId, includeArchived) {
     const query = `
       SELECT q.* 
-      FROM quizzes q
-      LEFT JOIN quiz_attempts qa ON q.id = qa.quiz_id AND qa.user_id = $1
-      WHERE q.is_active = true AND qa.id IS NULL;
-    `;
+FROM quizzes q
+LEFT JOIN quiz_attempts qa ON q.id = qa.quiz_id AND qa.user_id = $1
+WHERE q.is_active = true AND qa.id IS NULL`;
+    console.log(userId, includeArchived);
     const result = await db.query(query, [userId]);
+    console.log(result.rows);
     return result.rows;
+  }
+
+  async toggleArchiveStatus(userId, quizId, archive) {
+    const query = `
+      INSERT INTO user_archived_quizzes (user_id, quiz_id, archived)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id, quiz_id)
+      DO UPDATE SET archived = $3, updated_at = CURRENT_TIMESTAMP;
+    `;
+
+    await db.query(query, [userId, quizId, archive]);
+    return `Quiz ${archive ? 'archived' : 'unarchived'} successfully.`;
   }
 }
 

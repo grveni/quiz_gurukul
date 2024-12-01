@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Tabs, Tab, Table, Button, Checkbox } from '@mui/material';
-import { getUserActiveQuizzes, getNewQuizzes } from '../../utils/QuizAPI'; // Dummy APIs to be defined later
+import {
+  getUserActiveQuizzes,
+  getNewQuizzes,
+  archiveQuiz,
+} from '../../utils/QuizAPI'; // Dummy APIs to be defined later
 import './css/QuizListStudent.css'; // Import new CSS file
 
 const AllQuizListStudent = () => {
@@ -14,23 +18,29 @@ const AllQuizListStudent = () => {
   const [errorMessage, setErrorMessage] = useState(''); // For error handling
 
   useEffect(() => {
-    // Function to fetch quizzes
+    // Function to fetch both new and taken quizzes
     async function fetchQuizzes() {
       setLoading(true);
       setErrorMessage(''); // Reset error message before new fetch attempt
 
       try {
-        const takenQuizData = await getUserActiveQuizzes();
-        setTakenQuizzes(takenQuizData);
+        // Fetch taken quizzes
+        const takenQuizData = await getUserActiveQuizzes(showAll); // Pass current `showAll` state
+        setTakenQuizzes(takenQuizData || []); // Fallback to an empty array if no data
+
+        // Update `archivedQuizIds` directly from the response
+        const archivedIds = takenQuizData
+          .filter((quiz) => quiz.is_archived) // Use `is_archived` from the response
+          .map((quiz) => quiz.id);
+        setArchivedQuizIds(archivedIds);
       } catch (error) {
         setErrorMessage(error.message || 'Failed to fetch taken quizzes.');
       }
 
       try {
-        // Fetch new quizzes from the backend API
+        // Fetch new quizzes
         const newQuizData = await getNewQuizzes();
-        console.log(newQuizData);
-        setNewQuizzes(newQuizData);
+        setNewQuizzes(newQuizData || []); // Fallback to an empty array if no data
       } catch (error) {
         setErrorMessage(error.message || 'Failed to fetch new quizzes.');
       }
@@ -39,29 +49,49 @@ const AllQuizListStudent = () => {
     }
 
     fetchQuizzes();
-  }, []);
+  }, [showAll]); // Re-fetch quizzes when `showAll` state changes
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
   };
 
   // Handle archiving and unarchiving quizzes
-  const handleArchiveQuiz = (quizId) => {
-    setArchivedQuizIds(
-      (prevIds) =>
-        prevIds.includes(quizId)
-          ? prevIds.filter((id) => id !== quizId) // Unarchive if already archived
-          : [...prevIds, quizId] // Archive if not archived
-    );
+  const handleArchiveQuiz = async (quizId) => {
+    try {
+      const archive = !archivedQuizIds.includes(quizId);
+      await archiveQuiz(quizId, archive);
+
+      setArchivedQuizIds((prevIds) =>
+        archive ? [...prevIds, quizId] : prevIds.filter((id) => id !== quizId)
+      );
+
+      // Update `is_archived` in `takenQuizzes` for consistency
+      setTakenQuizzes((prevQuizzes) =>
+        prevQuizzes.map((quiz) =>
+          quiz.id === quizId ? { ...quiz, is_archived: archive } : quiz
+        )
+      );
+    } catch (error) {
+      console.error('Error archiving/unarchiving quiz:', error);
+    }
   };
 
-  const handleShowAllToggle = () => {
-    setShowAll((prevState) => !prevState); // Toggle between show all and show only active
+  const handleShowAllToggle = async () => {
+    const updatedShowAll = !showAll; // Calculate the updated value
+    setShowAll(updatedShowAll);
+
+    try {
+      const quizzes = await getUserActiveQuizzes(updatedShowAll); // Use the updated value
+      setTakenQuizzes(quizzes || []); // Fallback to empty array
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      setErrorMessage(error.message || 'Failed to fetch quizzes.');
+    }
   };
 
   const filteredTakenQuizzes = showAll
-    ? takenQuizzes
-    : takenQuizzes.filter((quiz) => !archivedQuizIds.includes(quiz.id));
+    ? takenQuizzes // Show all quizzes
+    : takenQuizzes.filter((quiz) => !archivedQuizIds.includes(quiz.id)); // Exclude archived
 
   return (
     <div className="quizzes-page">
@@ -115,37 +145,43 @@ const AllQuizListStudent = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredTakenQuizzes.map((quiz) => (
-                <tr key={quiz.id}>
-                  <td>
-                    <div
-                      className="table-cell-wrap"
-                      data-full-title={quiz.title}
-                    >
-                      <Link to={`/student/take-quiz/${quiz.id}`}>
-                        {quiz.title}
-                      </Link>
-                    </div>
-                  </td>
-                  <td>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      className="view-results-button MuiButton-root"
-                      component={Link}
-                      to={`/student/results/${quiz.id}`}
-                    >
-                      Results
-                    </Button>
-                  </td>
-                  <td>
-                    <Checkbox
-                      checked={archivedQuizIds.includes(quiz.id)}
-                      onChange={() => handleArchiveQuiz(quiz.id)}
-                    />
-                  </td>
+              {filteredTakenQuizzes.length > 0 ? (
+                filteredTakenQuizzes.map((quiz) => (
+                  <tr key={quiz.id}>
+                    <td>
+                      <div
+                        className="table-cell-wrap"
+                        data-full-title={quiz.title}
+                      >
+                        <Link to={`/student/take-quiz/${quiz.id}`}>
+                          {quiz.title}
+                        </Link>
+                      </div>
+                    </td>
+                    <td>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        className="view-results-button MuiButton-root"
+                        component={Link}
+                        to={`/student/results/${quiz.id}`}
+                      >
+                        Results
+                      </Button>
+                    </td>
+                    <td>
+                      <Checkbox
+                        checked={quiz.is_archived} // Directly use `is_archived` from the quiz object
+                        onChange={() => handleArchiveQuiz(quiz.id)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3">No quizzes available</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </Table>
 

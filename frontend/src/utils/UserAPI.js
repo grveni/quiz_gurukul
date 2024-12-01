@@ -84,7 +84,6 @@ export const getUsers = async () => {
         Authorization: `Bearer ${localStorage.getItem('token')}`, // Assuming JWT authentication
       },
     });
-    console.log('Fetched Users:', response.data.users); // Debugging log
     return response.data.users;
   } catch (error) {
     console.error(
@@ -109,7 +108,6 @@ export const getUserId = async () => {
         Authorization: `Bearer ${token}`, // Send the JWT token in the Authorization header
       },
     });
-    console.log('response id', response);
     return response.data.id; // Return only the user ID
   } catch (error) {
     if (error.response && error.response.data && error.response.data.message) {

@@ -49,6 +49,13 @@ class QuizRoutes extends Route {
       (req, res) => this.controller.addQuestions(req, res)
     );
 
+    // Route to toggle archive status for a specific quiz
+    this.router.post(
+      '/student/archive-quiz',
+      (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Ensure authentication
+      (req, res) => this.controller.toggleQuizArchiveStatus(req, res) // Call the controller method
+    );
+
     // Route to add a new question to a specific quiz
     this.router.post(
       '/:quizId/questions',
@@ -243,7 +250,7 @@ class QuizRoutes extends Route {
     this.router.get(
       '/student/active-quizzes',
       (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
-      (req, res) => this.controller.getStudentQuizzes(req, res)
+      (req, res) => this.controller.getStudentAttemptedQuizzes(req, res)
     );
 
     this.router.get(

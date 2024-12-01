@@ -19,7 +19,6 @@ export const login = async (email, password) => {
     return decodedToken.role;
   } catch (error) {
     // Send proper error message from server response if available
-    console.log(error.response.data.message);
     if (error.response && error.response.data && error.response.data.message) {
       throw new Error(error.response.data.message);
     } else {
@@ -43,7 +42,6 @@ export const getUserRole = () => {
 // Function to fetch roles
 export const fetchRoles = async () => {
   try {
-    console.log('API URL:', process.env.REACT_AUTH_APP_API_URL);
     const response = await axios.get(`${API_URL}/roles`, {
       headers: {
         'Cache-Control': 'no-cache',

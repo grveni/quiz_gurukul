@@ -277,7 +277,6 @@ export const getNextUntakenQuiz = async () => {
 
 export const submitQuizAnswers = async (quizId, answers) => {
   const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
-  console.log({ answers });
   const response = await axios.post(
     `${API_URL}/${quizId}/submit`,
     answers, // Directly include the answers array
@@ -339,14 +338,9 @@ export const updateQuizStatus = async (quizId, isActive) => {
     );
     return response.data;
   } catch (error) {
-    // Log the entire error object
-    console.log('API Error Response:', error.response);
-
     // Capture and throw the exact error message from the backend response
     const errorMessage =
       error.response?.data?.error || 'Failed to update quiz status';
-
-    console.log('Error Message:', errorMessage); // Log the error message
     throw new Error(errorMessage);
   }
 };
@@ -356,22 +350,20 @@ export const updateQuizStatus = async (quizId, isActive) => {
  * @returns {Array} - The list of quizzes
  * @throws {Error} - Throws an error if the request fails
  */
-export const getUserActiveQuizzes = async () => {
+export const getUserActiveQuizzes = async (includeArchived = false) => {
   try {
-    const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
-    const response = await axios.get(`${API_URL}/student/active-quizzes`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    return response.data;
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${API_URL}/student/active-quizzes?includeArchived=${includeArchived}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data; // Ensure proper data structure
   } catch (error) {
     console.error('Error fetching active quizzes:', error);
     throw new Error(
-      error.response
-        ? error.response.data.message
-        : 'Failed to fetch active quizzes'
+      error.response?.data?.message || 'Failed to fetch active quizzes.'
     );
   }
 };
@@ -385,7 +377,6 @@ export const getUserActiveQuizzes = async () => {
 export const getQuizById = async (quizId) => {
   try {
     const token = localStorage.getItem('token'); // Assuming JWT token is stored in localStorage
-    console.log('send request by id');
     const response = await axios.get(`${API_URL}/student/${quizId}/take`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -442,7 +433,6 @@ export const getDetailedQuizResponses = async ({ quizId, userId, type }) => {
         type,
       },
     });
-    console.log('Detailed responses received:', response.data); // Debug log
     return response.data;
   } catch (error) {
     console.error('Error fetching detailed quiz responses:', error);
@@ -466,4 +456,18 @@ export const getNewQuizzes = async () => {
       error.response?.data?.message || 'Failed to fetch new quizzes.'
     );
   }
+};
+
+export const archiveQuiz = async (quizId, archive) => {
+  const token = localStorage.getItem('token');
+  await axios.post(
+    `${API_URL}/student/archive-quiz`,
+    { quizId, archive },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
 };
