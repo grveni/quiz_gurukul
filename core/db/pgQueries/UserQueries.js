@@ -151,6 +151,96 @@ class UserQueries extends Query {
     const saltRounds = 10;
     return bcrypt.hash(password, saltRounds);
   }
+
+  async getAllUsersWithDetails() {
+    const query = `
+      SELECT id, username, flat_no, building_name, parent_name, mother_name, status
+      FROM users;
+    `;
+    return await this.query(query);
+  }
+
+  // Fetch field preferences for a user
+  async fetchFieldPreferences() {
+    const query = `
+    SELECT field_name
+    FROM field_preferences;
+  `;
+    const result = await db.query(query);
+    return result.rows.map((row) => row.field_name);
+  }
+
+  // Save or update field preferences for a user
+  async saveFieldPreferences(fieldNames) {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Delete existing preferences
+      const deleteQuery = `
+      DELETE FROM field_preferences;
+    `;
+      await client.query(deleteQuery);
+
+      // Insert new preferences
+      const insertQuery = `
+      INSERT INTO field_preferences ( field_name)
+      VALUES ( $1);
+    `;
+
+      for (const fieldName of fieldNames) {
+        await client.query(insertQuery, [fieldName]);
+      }
+
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error saving field preferences:', err.message);
+      throw new Error('Failed to save preferences');
+    } finally {
+      client.release();
+    }
+  }
+
+  async getAllUsersWithPreferredFields(preferredFields) {
+    try {
+      // Validate the fields
+      const validFields = await this.getValidUserFields();
+
+      const selectedFields = preferredFields.filter((field) =>
+        validFields.includes(field)
+      );
+
+      if (selectedFields.length === 0) {
+        throw new Error('No valid fields found in preferences');
+      }
+
+      selectedFields.push('status'); // Always include the status field
+      selectedFields.push('id');
+      // Construct dynamic query
+      const query = `
+      SELECT ${selectedFields.join(', ')}
+      FROM users;
+    `;
+      const { rows } = await db.query(query);
+
+      return await rows;
+    } catch {
+      console.error('Error fetching users prefered fields data:', err.message);
+      throw new Error('Failed to fetch users data');
+    }
+  }
+
+  async getValidUserFields() {
+    const query = `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'users';
+    `;
+    const result = await db.query(query);
+    return result.rows.map((row) => row.column_name); // Return an array of valid column names
+  }
 }
 
 module.exports = new UserQueries();

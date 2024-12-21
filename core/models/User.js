@@ -108,6 +108,20 @@ class User extends Model {
       throw error;
     }
   }
+
+  async fetchFieldPreferences() {
+    return await this.queryClass.fetchFieldPreferences();
+  }
+
+  async saveFieldPreferences(fieldNames) {
+    return await this.queryClass.saveFieldPreferences(fieldNames);
+  }
+
+  async getAllUsersWithPreferredFields(preferredFields) {
+    return await this.queryClass.getAllUsersWithPreferredFields(
+      preferredFields
+    );
+  }
 }
 
 module.exports = new User();

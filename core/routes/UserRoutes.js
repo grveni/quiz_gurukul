@@ -9,7 +9,14 @@ router.get(
   '/list-users',
   (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
   (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next),
-  (req, res) => UserController.getAllUsers(req, res)
+  (req, res) => UserController.getAllUsersNames(req, res)
+);
+//Route to list all user's admin prefered fields
+router.get(
+  '/list-users-details',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next),
+  (req, res) => UserController.getAllUsersWithDetails(req, res)
 );
 
 /// Define the route to return the logged-in user's ID
@@ -46,6 +53,22 @@ router.put(
   '/me/change-password',
   (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
   (req, res) => UserController.changePassword(req, res) // Call controller method
+);
+
+// Fetch field preferences
+router.get(
+  '/admin/preferences',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next),
+  (req, res) => UserController.fetchFieldPreferences(req, res)
+);
+
+// Save field preferences
+router.post(
+  '/admin/preferences/save',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next),
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next),
+  (req, res) => UserController.saveFieldPreferences(req, res)
 );
 
 module.exports = router;

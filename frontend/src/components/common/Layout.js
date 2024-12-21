@@ -59,7 +59,11 @@ const Layout = ({ role }) => {
   ];
 
   const adminLinks = [
-    { text: 'Manage Users', icon: <DashboardIcon />, path: '/admin/users' },
+    {
+      text: 'Manage Users',
+      icon: <DashboardIcon />,
+      path: '/admin/manage-users',
+    },
     { text: 'Add Quiz', icon: <QuizIcon />, path: '/admin/add-quiz' },
     { text: 'Add Questions', icon: <QuizIcon />, path: '/admin/add-questions' },
     {

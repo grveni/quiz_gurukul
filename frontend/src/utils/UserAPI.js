@@ -19,11 +19,16 @@ export const changeUserPassword = async (passwordData) => {
   return response.data;
 };
 
-export const getUserProfile = async () => {
+export const getUserProfile = async (userId = null) => {
   const token = localStorage.getItem('token');
-  const response = await axios.get(`${BASE_URL}/me/profile`, {
+  const url = userId
+    ? `${BASE_URL}/users/${userId}/profile` // Backend endpoint for admin to fetch specific user
+    : `${BASE_URL}/me/profile`; // Backend endpoint for logged-in user
+
+  const response = await axios.get(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
   return response.data;
 };
 
@@ -35,7 +40,7 @@ export const updateUserProfile = async (userDetails) => {
   return response.data;
 };
 
-// Simulate fetching users
+// Simulate fetching users names
 export const getUsers = async () => {
   try {
     const response = await axios.get(`${BASE_URL}/list-users`, {
@@ -44,6 +49,24 @@ export const getUsers = async () => {
       },
     });
     return response.data.users;
+  } catch (error) {
+    console.error(
+      'Error fetching users from API:',
+      error.response?.data || error.message
+    );
+    throw new Error(error.response?.data?.error || 'Failed to fetch users');
+  }
+};
+
+// Simulate fetching users details
+export const getUsersDetails = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/list-users-details`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`, // Assuming JWT authentication
+      },
+    });
+    return response.data;
   } catch (error) {
     console.error(
       'Error fetching users from API:',
@@ -74,5 +97,38 @@ export const getUserId = async () => {
     } else {
       throw new Error('Error fetching user ID');
     }
+  }
+};
+
+//Fetch admin preferences (selected fields)
+export const fetchPreferences = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${BASE_URL}/admin/preferences`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    console.log('raw data: ', response.data);
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching preferences:', error.message);
+    throw new Error('Failed to fetch preferences');
+  }
+};
+
+// Save admin preferences (selected fields)
+export const savePreferences = async (preferences) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${BASE_URL}/admin/preferences/save`,
+      { preferences },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data.message || 'Preferences saved successfully';
+  } catch (error) {
+    console.error('Error saving preferences:', error.message);
+    throw new Error('Failed to save preferences');
   }
 };
