@@ -46,7 +46,7 @@ const ManageUsers = () => {
             placeholder: field.form.placeholder || name,
           })
         );
-
+        console.log('Transformed fields:', fieldArray);
         setFields(fieldArray);
 
         setSelectedFields(

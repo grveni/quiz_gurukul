@@ -98,10 +98,11 @@ class UserController extends Controller {
       const userId = req.user.id;
 
       // Get the admin's preferred fields
-      const preferredFields = await User.fetchFieldPreferences(userId);
+      let preferredFields = await User.fetchFieldPreferences(userId);
       console.log('prefered fields: ', preferredFields);
       if (!preferredFields || preferredFields.length === 0) {
-        return res.status(400).json({ error: 'No preferred fields set.' });
+        console.log('setting default fields');
+        preferredFields = ['username', 'email'];
       }
 
       // Fetch user data with preferred fields
