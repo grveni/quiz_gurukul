@@ -93,4 +93,11 @@ router.post(
   (req, res) => UserController.saveFieldPreferences(req, res)
 );
 
+router.put(
+  '/admin/:id/status',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next), // Ensure admin role
+  (req, res) => UserController.changeUserStatus(req, res)
+);
+
 module.exports = router;

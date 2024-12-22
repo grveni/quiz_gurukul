@@ -18,9 +18,10 @@ export const login = async (email, password) => {
     const decodedToken = jwtDecode(token);
     return decodedToken.role;
   } catch (error) {
+    console.log(error.response.data);
     // Send proper error message from server response if available
-    if (error.response && error.response.data && error.response.data.message) {
-      throw new Error(error.response.data.message);
+    if (error.response && error.response.data && error.response.data.error) {
+      throw new Error(error.response.data.error);
     } else {
       throw new Error('Aut: Login failed');
     }
@@ -72,9 +73,14 @@ export const registerUser = async (formData) => {
     );
 
     return response.data;
-  } catch (err) {
-    console.error('Error during registration:', err);
-    throw new Error('Failed to register user');
+  } catch (error) {
+    console.log(error.response.data);
+    // Send proper error message from server response if available
+    if (error.response && error.response.data && error.response.data.error) {
+      throw new Error(error.response.data.error);
+    } else {
+      throw new Error('Failed to register user');
+    }
   }
 };
 

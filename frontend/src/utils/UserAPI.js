@@ -137,3 +137,18 @@ export const savePreferences = async (preferences) => {
     throw new Error('Failed to save preferences');
   }
 };
+
+export const updateUserStatus = async (userId, status) => {
+  const token = localStorage.getItem('token');
+  const url = `${BASE_URL}/admin/${userId}/status`;
+
+  const response = await axios.put(
+    url,
+    { status },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return response.data;
+};

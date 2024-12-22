@@ -199,6 +199,27 @@ class UserController extends Controller {
       res.status(500).json({ error: 'Failed to save field preferences' });
     }
   }
+
+  async changeUserStatus(req, res) {
+    try {
+      const userId = req.params.id;
+      const { status } = req.body; // New status (true/false)
+
+      if (typeof status !== 'boolean') {
+        return res.status(400).json({ error: 'Invalid status value' });
+      }
+
+      const success = await User.changeStatus(userId, status);
+      if (!success) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'User status updated successfully' });
+    } catch (error) {
+      console.error('Error changing user status:', error.message);
+      res.status(500).json({ error: 'Failed to change user status' });
+    }
+  }
 }
 
 module.exports = new UserController();

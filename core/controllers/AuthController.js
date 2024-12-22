@@ -126,6 +126,13 @@ class AuthController extends Controller {
         console.log('user not found');
         return res.status(404).json({ message: 'User not found' });
       }
+      console.log(user);
+      //Add logic to check status if disabled, send proper message
+      if (!user.status) {
+        return res.status(403).json({
+          error: 'User account disabled. Please contact Admin +91-9811406988',
+        });
+      }
 
       // Verify password
       const isMatch = await User.comparePassword(password, user.password);

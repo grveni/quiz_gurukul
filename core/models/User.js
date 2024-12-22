@@ -122,6 +122,11 @@ class User extends Model {
       preferredFields
     );
   }
+
+  async changeStatus(userId, status) {
+    const result = await this.queryClass.changeStatus(userId, status);
+    return result; // Return true if the update was successful
+  }
 }
 
 module.exports = new User();

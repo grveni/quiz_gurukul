@@ -145,6 +145,16 @@ class UserQueries extends Query {
     return result.rowCount > 0;
   }
 
+  async changeStatus(userId, status) {
+    const query = `
+    UPDATE users
+    SET status = $2, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+  `;
+    const result = await db.query(query, [userId, status]);
+    return result.rowCount > 0;
+  }
+
   async hashPassword(password) {
     const bcrypt = require('bcryptjs');
     const saltRounds = 10;

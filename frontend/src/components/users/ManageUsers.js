@@ -5,6 +5,7 @@ import {
   fetchPreferences,
   savePreferences,
   getUsersDetails,
+  updateUserStatus,
 } from '../../utils/UserAPI';
 import {
   Box,
@@ -83,9 +84,25 @@ const ManageUsers = () => {
     }
   };
 
-  const handleToggleStatus = (userId, currentStatus) => {
-    // Backend API to toggle status would go here
-    console.log(`Toggling status for user ID ${userId} to ${!currentStatus}`);
+  const handleToggleStatus = async (userId, currentStatus) => {
+    try {
+      const response = await updateUserStatus(userId, !currentStatus); // Toggle status
+
+      if (response.error) {
+        throw new Error(response.error); // Handle error returned from the backend
+      }
+
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId ? { ...user, status: !currentStatus } : user
+        )
+      );
+
+      alert('User status updated successfully');
+    } catch (error) {
+      console.error('Error updating user status:', error.message);
+      alert(`Failed to update user status: ${error.message}`);
+    }
   };
 
   const handleViewEdit = (userId) => {
