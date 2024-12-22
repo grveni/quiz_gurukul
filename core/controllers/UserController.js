@@ -7,7 +7,6 @@ class UserController extends Controller {
   async getAllUsersNames(req, res) {
     try {
       const users = await User.getAllUsernames();
-      console.log('Fetched Users:', users); // Debugging log
       res.status(200).json({ users });
     } catch (error) {
       console.error('Error fetching users:', error.message); // Error log
@@ -41,8 +40,26 @@ class UserController extends Controller {
   }
   async getUserProfile(req, res) {
     try {
-      const userId = req.user.id; // Get user ID from authenticated token
+      // Fetch the logged-in user's ID
+      const loggedInUserId = req.user.id;
+
+      // Check the role of the logged-in user
+      const role = await User.findUserRoleName(loggedInUserId);
+
+      let userId;
+      if (role === 'Admin' && req.params.id) {
+        // If admin and params.id is provided, fetch the specified user's profile
+        userId = req.params.id;
+      } else {
+        // For non-admins or if no params.id is provided, use the logged-in user's ID
+        userId = loggedInUserId;
+      }
+
       const profile = await User.getUserProfile(userId);
+      if (!profile) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
       res.status(200).json(profile);
     } catch (error) {
       console.error('Error fetching user profile:', error.message);
@@ -52,7 +69,20 @@ class UserController extends Controller {
 
   async updateUserProfile(req, res) {
     try {
-      const userId = req.user.id;
+      // Fetch the logged-in user's ID
+      const loggedInUserId = req.user.id;
+
+      // Check the role of the logged-in user
+      const role = await User.findUserRoleName(loggedInUserId);
+
+      let userId;
+      if (role === 'Admin' && req.params.id) {
+        // If admin and params.id is provided, fetch the specified user's profile
+        userId = req.params.id;
+      } else {
+        // For non-admins or if no params.id is provided, use the logged-in user's ID
+        userId = loggedInUserId;
+      }
       const userDetails = req.body;
       const message = await User.updateUserProfile(userId, userDetails);
       res.status(200).json({ message });
@@ -64,7 +94,20 @@ class UserController extends Controller {
 
   async changePassword(req, res) {
     try {
-      const userId = req.user.id; // Extract user ID from JWT
+      // Fetch the logged-in user's ID
+      const loggedInUserId = req.user.id;
+
+      // Check the role of the logged-in user
+      const role = await User.findUserRoleName(loggedInUserId);
+
+      let userId;
+      if (role === 'Admin' && req.params.id) {
+        // If admin and params.id is provided, fetch the specified user's profile
+        userId = req.params.id;
+      } else {
+        // For non-admins or if no params.id is provided, use the logged-in user's ID
+        userId = loggedInUserId;
+      }
       const { currentPassword, newPassword } = req.body;
 
       if (!currentPassword || !newPassword) {
@@ -99,7 +142,6 @@ class UserController extends Controller {
 
       // Get the admin's preferred fields
       let preferredFields = await User.fetchFieldPreferences(userId);
-      console.log('prefered fields: ', preferredFields);
       if (!preferredFields || preferredFields.length === 0) {
         console.log('setting default fields');
         preferredFields = ['username', 'email'];
@@ -107,7 +149,6 @@ class UserController extends Controller {
 
       // Fetch user data with preferred fields
       const users = await User.getAllUsersWithPreferredFields(preferredFields);
-      console.log(users);
       res.status(200).json(users);
     } catch (error) {
       console.error('Error fetching users:', error.message);
@@ -146,7 +187,7 @@ class UserController extends Controller {
   async saveFieldPreferences(req, res) {
     try {
       const { preferences } = req.body; // Expect an array of field names in request body
-      console.log('Received Preferences:', req.body);
+
       if (!Array.isArray(preferences) || preferences.length === 0) {
         return res.status(400).json({ error: 'Invalid fields format' });
       }

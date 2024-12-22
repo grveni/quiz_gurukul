@@ -42,6 +42,21 @@ router.get(
   (req, res) => UserController.getUserProfile(req, res)
 );
 
+// Route to fetch a user's profile (admin or self)
+router.get(
+  '/admin/:id/profile',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next), // Allow admin or user roles
+  (req, res) => UserController.getUserProfile(req, res)
+);
+
+router.put(
+  '/admin/:id/profile',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next), // Ensure admin role
+  (req, res) => UserController.updateUserProfile(req, res)
+);
+
 // Route to update user profile
 router.put(
   '/me/profile',
@@ -52,6 +67,13 @@ router.put(
 router.put(
   '/me/change-password',
   (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res) => UserController.changePassword(req, res) // Call controller method
+);
+
+router.put(
+  '/admin/:id/change-password',
+  (req, res, next) => AuthMiddleware.verifyToken(req, res, next), // Authenticate using JWT
+  (req, res, next) => AuthMiddleware.authorizeRoles('admin')(req, res, next),
   (req, res) => UserController.changePassword(req, res) // Call controller method
 );
 

@@ -4,25 +4,26 @@ const BASE_URL =
   process.env.REACT_APP_API_USERS_URL || 'http://localhost:5001/api/users';
 
 // Change the user's password
-export const changeUserPassword = async (passwordData) => {
+export const changeUserPassword = async (passwordData, userId = null) => {
   const token = localStorage.getItem('token');
-  const response = await axios.put(
-    `${BASE_URL}/me/change-password`,
-    {
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-    },
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  const passwordFormattedData = {
+    currentPassword: passwordData.currentPassword,
+    newPassword: passwordData.newPassword,
+  };
+  const url = userId
+    ? `${BASE_URL}/admin/${userId}/change-password` // Admin updating a specific user password
+    : `${BASE_URL}/me/change-password`; // Logged-in user updating their own profile
+
+  const response = await axios.put(url, passwordFormattedData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return response.data;
 };
 
 export const getUserProfile = async (userId = null) => {
   const token = localStorage.getItem('token');
   const url = userId
-    ? `${BASE_URL}/users/${userId}/profile` // Backend endpoint for admin to fetch specific user
+    ? `${BASE_URL}/admin/${userId}/profile` // Backend endpoint for admin to fetch specific user
     : `${BASE_URL}/me/profile`; // Backend endpoint for logged-in user
 
   const response = await axios.get(url, {
@@ -32,11 +33,16 @@ export const getUserProfile = async (userId = null) => {
   return response.data;
 };
 
-export const updateUserProfile = async (userDetails) => {
+export const updateUserProfile = async (formData, userId = null) => {
   const token = localStorage.getItem('token');
-  const response = await axios.put(`${BASE_URL}/me/profile`, userDetails, {
+  const url = userId
+    ? `${BASE_URL}/admin/${userId}/profile` // Admin updating a specific user
+    : `${BASE_URL}/me/profile`; // Logged-in user updating their own profile
+
+  const response = await axios.put(url, formData, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
   return response.data;
 };
 
@@ -107,7 +113,6 @@ export const fetchPreferences = async () => {
     const response = await axios.get(`${BASE_URL}/admin/preferences`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log('raw data: ', response.data);
     return response.data || [];
   } catch (error) {
     console.error('Error fetching preferences:', error.message);

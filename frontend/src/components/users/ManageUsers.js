@@ -46,7 +46,6 @@ const ManageUsers = () => {
             placeholder: field.form.placeholder || name,
           })
         );
-        console.log('Transformed fields:', fieldArray);
         setFields(fieldArray);
 
         setSelectedFields(
@@ -90,7 +89,7 @@ const ManageUsers = () => {
   };
 
   const handleViewEdit = (userId) => {
-    navigate(`/view-profile/${userId}`);
+    navigate(`/admin/view-profile/${userId}`);
   };
 
   return (
@@ -165,7 +164,9 @@ const ManageUsers = () => {
                   </TableCell>
                 ))}
                 <TableCell align="center">
-                  <IconButton>
+                  <IconButton onClick={() => handleViewEdit(user.id)}>
+                    {' '}
+                    {/* Pass userId */}
                     <EditIcon />
                   </IconButton>
                 </TableCell>

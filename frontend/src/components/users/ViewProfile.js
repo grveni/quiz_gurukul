@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   getUserProfile,
   updateUserProfile,
@@ -8,6 +9,7 @@ import { fetchConfig } from '../../utils/AuthAPI';
 import { useNavigate } from 'react-router-dom';
 
 const ViewProfile = () => {
+  const { userId } = useParams(); // Extract userId from route params
   const [formFields, setFormFields] = useState([]);
   const [formData, setFormData] = useState({});
   const [showPasswordForm, setShowPasswordForm] = useState(false); // Toggle for password form
@@ -19,6 +21,7 @@ const ViewProfile = () => {
   const [passwordError, setPasswordError] = useState(''); // Password error state
   const [globalErrors, setGlobalErrors] = useState([]);
   const [editMode, setEditMode] = useState(true); // Profile edit mode
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,7 +38,7 @@ const ViewProfile = () => {
         const formFieldsConfig = config.fields || config.data?.fields || {};
 
         // Fetch user profile
-        const userProfile = await getUserProfile();
+        const userProfile = await getUserProfile(userId);
 
         // Filter out password field from formFields
         const filteredFields = Object.keys(formFieldsConfig)
@@ -56,7 +59,7 @@ const ViewProfile = () => {
     }
 
     fetchInitialData();
-  }, [navigate]);
+  }, [navigate, userId]);
 
   // Handle change in the profile fields
   const handleInputChange = (e) => {
@@ -70,16 +73,19 @@ const ViewProfile = () => {
   // Handle change in the password fields
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData({
-      ...passwordData,
-      [name]: value,
-    });
+    setPasswordData(
+      {
+        ...passwordData,
+        [name]: value,
+      },
+      userId
+    );
   };
 
   // Update profile information
   const handleUpdateInfo = async () => {
     try {
-      await updateUserProfile(formData); // API call to update profile
+      await updateUserProfile(formData, userId); // API call to update profile
       alert('Profile updated successfully');
     } catch (error) {
       alert('Error updating profile');
@@ -88,9 +94,6 @@ const ViewProfile = () => {
 
   // Validate and send password change request
   const handlePasswordSubmit = async () => {
-    console.log('Password submit clicked');
-    console.log('Current Password Data:', passwordData);
-
     setPasswordError(''); // Clear existing errors
 
     // Validate password inputs
@@ -120,11 +123,13 @@ const ViewProfile = () => {
     try {
       console.log('Sending request to change password');
       // API call to change password
-      const result = await changeUserPassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
-      console.log('Password change response:', result);
+      const result = await changeUserPassword(
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        },
+        userId
+      );
       alert(result.message || 'Password changed successfully');
       setShowPasswordForm(false); // Hide the password form
       setPasswordData({
