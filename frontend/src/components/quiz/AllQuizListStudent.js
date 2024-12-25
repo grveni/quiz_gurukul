@@ -122,7 +122,7 @@ const AllQuizListStudent = () => {
           onClick={() => setOpenTakenQuizzes((prev) => !prev)}
           style={{ cursor: 'pointer' }}
         >
-          Completed Quizzes {openTakenQuizzes ? '▼' : '▲'}
+          Attempted Quizzes {openTakenQuizzes ? '▼' : '▲'}
         </Typography>
         <Collapse in={openTakenQuizzes}>
           {filteredTakenQuizzes.length > 0 ? (
