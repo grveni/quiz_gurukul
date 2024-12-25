@@ -98,3 +98,13 @@
   font-size: 14px;
   padding: 8px 16px;
 }
+
+/* Add light gray background to section headings */
+.new-quizzes-section h6,
+.taken-quizzes-section h6 {
+  background-color: #e0e0e0; /* Light gray background */
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  cursor: pointer;
+}
