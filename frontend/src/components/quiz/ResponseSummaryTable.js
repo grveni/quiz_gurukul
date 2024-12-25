@@ -20,12 +20,10 @@ const SummaryTable = ({ responses, viewType, selectedQuiz, selectedUser }) => {
         </thead>
         <tbody>
           {responses.map((response) => (
-            <tr key={response.id}>
-              <td>
-                {viewType === 'quiz' ? response.username : response.quizTitle}
-              </td>
+            <tr key={response.userId}>
+              <td>{viewType === 'quiz' ? response.username : selectedQuiz}</td>
               <td>{response.score}</td>
-              <td>{response.percentage}%</td>
+              <td>{parseFloat(response.percentage).toFixed(2)}%</td>
               <td>
                 <button className="view-detail-button">View Detail</button>
               </td>

@@ -27,8 +27,7 @@ const ViewResponses = () => {
       try {
         const quizData = await getQuizzes();
         const userData = await getUsers();
-        console.log('Fetched quizzes:', quizData); // Log fetched quizzes
-        console.log('Fetched users:', userData); // Log fetched users
+
         setQuizzes(quizData);
         setUsers(userData);
       } catch (err) {
@@ -39,135 +38,86 @@ const ViewResponses = () => {
     fetchData();
   }, []);
 
-  // Get the selected quiz title
-  // Get the selected quiz title
+  // Log changes to responses and state
+  useEffect(() => {}, [responses, selectedResponseType]);
+
   const getSelectedQuizTitle = () => {
-    console.log('Selected quiz ID (type):', selectedQuiz, typeof selectedQuiz); // Log selected quiz ID and type
-
-    const selectedQuizObj = quizzes.find((quiz) => {
-      console.log(
-        `Comparing quiz ID: ${
-          quiz.id
-        } with selectedQuiz: ${selectedQuiz} (types: ${typeof quiz.id} and ${typeof selectedQuiz})`
-      );
-      return Number(quiz.id) === Number(selectedQuiz); // Use == to handle string/number mismatch
-    });
-
-    console.log('Selected quiz object:', selectedQuizObj); // Log the selected quiz object
-
-    const quizTitle = selectedQuizObj ? selectedQuizObj.title : '';
-    console.log(`Selected quiz title: ${quizTitle}`); // Log the selected quiz title
-    return quizTitle;
+    const selectedQuizObj = quizzes.find(
+      (quiz) => Number(quiz.id) === Number(selectedQuiz)
+    );
+    return selectedQuizObj ? selectedQuizObj.title : '';
   };
 
-  // Get the selected user name
   const getSelectedUserName = () => {
-    console.log('Selected user ID:', selectedUser); // Log the selected user ID
-    const selectedUserObj = users.find((user) => {
-      console.log(
-        `Comparing user ID: ${user.id} with selectedUser: ${selectedUser}`
-      );
-      return user.id === selectedUser; // Ensure IDs are correctly compared
-    });
-    const userName = selectedUserObj ? selectedUserObj.username : '';
-    console.log(`Selected user name: ${userName}`); // Log the selected user name
-    return userName;
+    const selectedUserObj = users.find((user) => user.id === selectedUser);
+    return selectedUserObj ? selectedUserObj.username : '';
   };
 
-  // Handle quiz selection
   const handleQuizSelect = async (quizId) => {
     setSelectedQuiz(quizId);
     setSelectedUser('');
     setViewType('quiz');
-    setResponses([]); // Clear previous responses when switching
-
-    console.log(`Selected Quiz ID: ${quizId}`);
-    console.log(`Response Type: ${selectedResponseType}`);
+    setResponses([]);
 
     if (selectedResponseType === 'summary') {
       const quizResponses = await getQuizResponses(quizId);
-      console.log('Summary responses for quiz:', quizResponses);
       setResponses(quizResponses || []);
     } else if (selectedResponseType === 'detail') {
       const quizResponses = await getDetailedQuizResponses({
         quizId,
         type: 'quiz',
       });
-      console.log('Detailed responses for quiz:', quizResponses);
       setResponses(quizResponses || []);
     }
   };
 
-  // Handle user selection
   const handleUserSelect = async (userId) => {
     setSelectedUser(userId);
     setSelectedQuiz('');
     setViewType('user');
-    setResponses([]); // Clear previous responses when switching
-
-    console.log(`Selected User ID: ${userId}`);
-    console.log(`Response Type: ${selectedResponseType}`);
+    setResponses([]);
 
     if (selectedResponseType === 'summary') {
       const userResponses = await fetchUserResponses(userId);
-      console.log('Summary responses for user:', userResponses);
       setResponses(userResponses || []);
     } else if (selectedResponseType === 'detail') {
       const userResponses = await getDetailedQuizResponses({
         userId,
         type: 'user',
       });
-      console.log('Detailed responses for user:', userResponses);
       setResponses(userResponses || []);
     }
   };
 
-  // Handle response type change
   const handleResponseTypeSelect = async (e) => {
     const newResponseType = e.target.value;
     setSelectedResponseType(newResponseType);
-    setResponses([]); // Clear previous responses when switching
+    setResponses([]);
 
-    console.log('Changed response type to:', newResponseType);
-
-    // Re-fetch responses based on the current selection
     if (selectedQuiz) {
-      console.log(
-        `Re-fetching for quiz ID: ${selectedQuiz} with type: ${newResponseType}`
-      );
       if (newResponseType === 'summary') {
         const quizResponses = await getQuizResponses(selectedQuiz);
-        console.log('Summary responses for quiz:', quizResponses);
         setResponses(quizResponses || []);
       } else {
         const quizResponses = await getDetailedQuizResponses({
           quizId: selectedQuiz,
           type: 'quiz',
         });
-        console.log('Detailed responses for quiz:', quizResponses);
         setResponses(quizResponses || []);
       }
     } else if (selectedUser) {
-      console.log(
-        `Re-fetching for user ID: ${selectedUser} with type: ${newResponseType}`
-      );
       if (newResponseType === 'summary') {
         const userResponses = await fetchUserResponses(selectedUser);
-        console.log('Summary responses for user:', userResponses);
         setResponses(userResponses || []);
       } else {
         const userResponses = await getDetailedQuizResponses({
           userId: selectedUser,
           type: 'user',
         });
-        console.log('Detailed responses for user:', userResponses);
         setResponses(userResponses || []);
       }
     }
   };
-
-  // Log the current responses before rendering
-  console.log('Current Responses:', responses);
 
   return (
     <div className="view-responses-page">
@@ -175,7 +125,6 @@ const ViewResponses = () => {
 
       {error && <p className="error-message">{error}</p>}
 
-      {/* Render Dropdown Component */}
       <DropdownComponent
         selectedQuiz={selectedQuiz}
         selectedUser={selectedUser}
@@ -188,22 +137,28 @@ const ViewResponses = () => {
       />
 
       {/* Conditionally render summary or detailed table */}
-      {responses.length > 0 &&
-        (selectedResponseType === 'summary' ? (
+      {responses ? (
+        selectedResponseType === 'summary' ? (
           <SummaryTable
             responses={responses}
             viewType={viewType}
-            selectedQuiz={getSelectedQuizTitle()} // Pass quiz title
-            selectedUser={getSelectedUserName()} // Pass user name
+            selectedQuiz={getSelectedQuizTitle()}
+            selectedUser={getSelectedUserName()}
+          />
+        ) : responses.responses && responses.questions ? (
+          <DetailTable
+            responses={responses.responses}
+            questions={responses.questions}
+            viewType={viewType}
+            selectedQuizTitle={getSelectedQuizTitle()}
+            selectedUserName={getSelectedUserName()}
           />
         ) : (
-          <DetailTable
-            responses={responses}
-            viewType={viewType}
-            selectedQuizTitle={getSelectedQuizTitle()} // Pass quiz title
-            selectedUserName={getSelectedUserName()} // Pass user name
-          />
-        ))}
+          <p>No valid data available to display</p>
+        )
+      ) : (
+        <p>No responses available to display</p>
+      )}
     </div>
   );
 };

@@ -201,10 +201,7 @@ class QuizController extends Controller {
     if (!Array.isArray(question.options) || question.options.length < 2) {
       return false;
     }
-    console.log(question);
     for (const step of question.options) {
-      console.log(step);
-
       if (
         !step.option_text ||
         typeof step.option_text !== 'string' ||
@@ -235,7 +232,6 @@ class QuizController extends Controller {
         typeof pair.right_option_text !== 'string' ||
         !pair.right_option_text.trim()
       ) {
-        console.log('pair', pair);
         return false;
       }
     }
@@ -322,9 +318,6 @@ class QuizController extends Controller {
 
       // Step 3: Add questions using the model method
       const addedQuestions = await Quiz.addQuestions(quizId, questions);
-      console.log(
-        `Successfully added questions: ${JSON.stringify(addedQuestions)}`
-      ); // Debugging log
 
       // Step 4: Return success response
       res.status(201).json({ addedQuestions });
@@ -364,7 +357,6 @@ class QuizController extends Controller {
       if (!quiz) {
         return res.status(404).json({ message: 'Quiz not found' });
       }
-      console.log('getQuiz : ', quiz);
       res.status(200).json({ quiz });
     } catch (error) {
       console.error('Error fetching quiz:', error);
@@ -392,8 +384,6 @@ class QuizController extends Controller {
           .json({ message: 'No questions found for this quiz.' });
       }
 
-      console.log('Questions:', questions);
-
       // Fetch correct answers for the quiz
       const correctAnswers = await Quiz.getCorrectAnswers(quizId);
 
@@ -402,8 +392,6 @@ class QuizController extends Controller {
           .status(404)
           .json({ message: 'No correct answers found for this quiz.' });
       }
-
-      console.log('Correct answers fetched successfully:', correctAnswers);
 
       // Attach correct answers to questions
       const questionsWithAnswers = this.attachCorrectAnswers(
@@ -534,7 +522,6 @@ class QuizController extends Controller {
       if (!isValid) return;
       const { quizId, questionId } = req.params;
       const deletedQuestion = await Quiz.deleteQuestion(quizId, questionId);
-      console.log(quizId, questionId);
       if (!deletedQuestion) {
         return res.status(404).json({ message: 'Question not found' });
       }
@@ -600,9 +587,6 @@ class QuizController extends Controller {
    */
   async updateQuiz(req, res) {
     try {
-      console.log('Received updateQuiz request:', req.params);
-      console.log('Received body:', req.body);
-
       const isValid = await this.inputValidation(
         ['title', 'description', 'questions'],
         req,
@@ -612,12 +596,6 @@ class QuizController extends Controller {
 
       const { quizId } = req.params;
       const { title, description, questions, metaEdited } = req.body;
-
-      console.log('Quiz ID:', quizId);
-      console.log('Title:', title);
-      console.log('Description:', description);
-      console.log('Meta Edited:', metaEdited);
-      console.log('Questions:', questions);
 
       let updatedQuiz = null;
       if (metaEdited) {
@@ -655,7 +633,6 @@ class QuizController extends Controller {
       if (!quiz) {
         return res.status(404).json({ message: 'No active quiz found' });
       }
-      console.log(quiz);
       res.status(200).json({ quiz });
     } catch (error) {
       this.handleError(res, error);
@@ -703,7 +680,6 @@ class QuizController extends Controller {
    */
   async submitQuizAnswers(req, res) {
     try {
-      console.log(req.body);
       const { quizId } = req.params;
       const userId = req.user.id;
       const isValid = await this.inputValidation(['answers'], req, res);
@@ -758,7 +734,6 @@ class QuizController extends Controller {
           .json({ message: 'No correct answers found for this quiz.' });
       }
 
-      console.log(`Correct answers fetched successfully:`, correctAnswers);
       res.status(200).json(correctAnswers);
     } catch (error) {
       console.error('Error fetching correct answers:', error.message);
@@ -774,7 +749,6 @@ class QuizController extends Controller {
       const isActive = is_active === true || is_active === 'true';
       console.log(isActive);
       const quiz = await Quiz.updateQuizStatus(quizId, isActive);
-      console.log('returned obj from model:', quiz);
       if (!quiz) {
         return res.status(404).json({
           error: 'Quiz not found or no questions added to be published!',
@@ -792,7 +766,6 @@ class QuizController extends Controller {
     const { includeArchived = false } = req.query; // Accept query parameter for archived quizzes
     try {
       const quizzes = await Quiz.getUserActiveQuizzes(userId, includeArchived);
-      console.log(quizzes);
       res.json(quizzes);
     } catch (error) {
       console.error('Error fetching student quizzes:', error);
@@ -901,7 +874,7 @@ class QuizController extends Controller {
   }
 
   /**
-   * Fetch quiz responses (score and percentage) for each user who attempted the quiz
+   * Fetch quiz responses (score and percentage) for all user who attempted the quiz
    * @param {Object} req - The request object containing quizId
    * @param {Object} res - The response object to send data
    */
@@ -967,36 +940,58 @@ class QuizController extends Controller {
 
     return formatted;
   }
+
+  // Helper to format responses as per the required structure
   formatQuizResponses(responses) {
-    console.log('Received responses for formatting:', responses);
+    const formatted = {
+      quizId: responses[0]?.quiz_id || null,
+      questions: [],
+      userResponses: [],
+    };
 
-    const formatted = responses.reduce((acc, curr) => {
-      const existingUser = acc.find((item) => item.username === curr.username);
+    const questionMap = new Map();
 
-      // Log each response data before formatting
-      console.log('Current response data:', curr);
-
-      const responseData = {
-        questionText: curr.question_text,
-        correctAnswer: curr.correct_answer,
-        userResponse: curr.user_response,
-        isCorrect: curr.is_correct,
-      };
-
-      if (existingUser) {
-        existingUser.quizResponses.push(responseData);
-      } else {
-        acc.push({
-          username: curr.username,
-          quizResponses: [responseData],
-        });
+    // Process responses to format questions
+    responses.forEach((response) => {
+      // Handle questions and options/grids
+      if (!questionMap.has(response.question_id)) {
+        const question = {
+          questionId: response.question_id,
+          questionText: response.question_text,
+          options: response.options || [], // Options for MCQ/True-False
+          grids: response.grids || [], // Grid-based questions (match pairs/correct order)
+        };
+        questionMap.set(response.question_id, question);
+        formatted.questions.push(question);
       }
 
-      return acc;
-    }, []);
+      // Add user responses
+      const userResponse = formatted.userResponses.find(
+        (ur) => ur.userId === response.user_id
+      );
 
-    // Log the final formatted structure
-    console.log('Formatted quiz responses:', formatted);
+      const responseData = {
+        questionId: response.question_id,
+        responses: response.responses || [], // MCQ/True-False responses
+        grids: response.grids || [], // Grid-based responses
+      };
+
+      if (userResponse) {
+        userResponse.responses.push(responseData);
+      } else {
+        formatted.userResponses.push({
+          userId: response.user_id,
+          username: response.username,
+          attempt: {
+            attemptId: response.attempt_id,
+            attemptDate: response.formatted_attempt_date,
+            score: response.score,
+            percentage: response.percentage,
+          },
+          responses: [responseData],
+        });
+      }
+    });
 
     return formatted;
   }
@@ -1004,12 +999,16 @@ class QuizController extends Controller {
   // Method to get detailed quiz responses based on type (quiz or user)
   async getDetailedQuizResponses(req, res) {
     try {
-      const { quizId, userId, type } = req.query;
+      console.log('Received query parameters:', req.query); // Debugging log
+      const quizId = req.query.quizId;
+      const userId = req.query.userId;
+      const type = req.query.type;
 
       console.log(
         `Received request for detailed responses with quizId: ${quizId}, userId: ${userId}, type: ${type}`
       ); // Debug log
-
+      const questions = await Quiz.listAllQuestions(quizId, true);
+      //console.log(questions);
       // Fetch detailed quiz responses
       const responses = await Quiz.getDetailedResponses({
         quizId,
@@ -1017,9 +1016,9 @@ class QuizController extends Controller {
         type,
       });
 
-      console.log('Detailed quiz responses fetched:', responses); // Debug log
+      //console.log('Detailed quiz responses fetched:', responses); // Debug log
 
-      let formattedResponses;
+      /*let formattedResponses;
       if (type === 'quiz' && quizId) {
         formattedResponses = this.formatQuizResponses(responses);
       } else if (type === 'user' && userId) {
@@ -1028,14 +1027,17 @@ class QuizController extends Controller {
         return res
           .status(400)
           .json({ error: 'Invalid type or missing quizId/userId' });
-      }
-      console.log('Detailed quiz responses formatted:', formattedResponses); // Debug log
-      return res.status(200).json(formattedResponses);
+      }*/
+      //console.log('Detailed quiz responses formatted:', formattedResponses); // Debug log
+      return res
+        .status(200)
+        .json({ questions: questions, responses: responses });
     } catch (error) {
-      console.error('Error fetching detailed responses:', error);
+      console.error('Controller: Error fetching detailed responses:', error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
+
   async getStudentNewQuizzes(req, res) {
     const userId = req.user.id;
     const { includeArchived = false } = req.query; // Accept query parameter for archived quizzes

@@ -161,9 +161,12 @@ class Quiz extends Model {
    * @param {Number} quizId - The ID of the quiz
    * @returns {Array} - The list of questions
    */
-  async listAllQuestions(quizId) {
+  async listAllQuestions(quizId, fetchCorrectAns = false) {
     try {
-      return await this.queryClass.findQuestionsByQuizId(quizId);
+      return await this.queryClass.findQuestionsByQuizId(
+        quizId,
+        fetchCorrectAns
+      );
     } catch (error) {
       console.error('Error in listAllQuestions:', error);
       throw error;
@@ -464,7 +467,7 @@ class Quiz extends Model {
   }
 
   /**
-   * Fetch the latest quiz attempt for a user for a specific quiz
+   * Fetch the latest quiz attempt for all user for a specific quiz
    * @param {Number} userId - The ID of the user
    * @param {Number} quizId - The ID of the quiz
    * @returns {Object} - The latest quiz attempt with score and percentage
@@ -476,7 +479,7 @@ class Quiz extends Model {
   // Method to get detailed responses based on type (quiz or user)
   async getDetailedResponses({ quizId, userId, type }) {
     if (type === 'quiz') {
-      console.log(`Fetching detailed responses for quiz ID: ${quizId}`);
+      console.log(`Model Fetching detailed responses for quiz ID: ${quizId}`);
       // Fetch detailed responses for a quiz
       return await quizQueries.getDetailedQuizResponses(quizId);
     } else if (type === 'user') {

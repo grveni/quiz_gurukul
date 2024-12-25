@@ -1,98 +1,51 @@
-.detail-responses-table {
-  width: auto; /* Remove fixed width */
+.detail-table-container {
+  margin: 20px;
+}
+
+.questions-table,
+.responses-table {
+  width: 100%;
   border-collapse: collapse;
-  table-layout: auto; /* Adjust table layout to auto to allow scrolling */
-  overflow-x: auto; /* Enable horizontal scrolling */
+  margin-bottom: 20px;
+  background-color: #fafafa;
+  border: 1px solid #ddd; /* Ensure the outer border is visible */
 }
 
-.detail-responses-table th,
-.detail-responses-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
+.questions-table th,
+.responses-table th,
+.questions-table td,
+.responses-table td {
+  border: 1px solid #ddd; /* Ensure borders for each cell */
+  padding: 10px;
   text-align: left;
-  word-wrap: break-word;
-  overflow: hidden;
-}
-
-.detail-responses-table th {
-  background-color: #f9f9f9;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  max-height: 80px; /* Limit the header row height */
-  height: auto;
   vertical-align: top;
-  font-weight: normal; /* Set header text to not bold */
 }
 
-.correct-answer-row {
-  background-color: #f2f2f2;
+.questions-table th,
+.responses-table th {
+  background-color: #f1f1f1;
+  font-weight: bold;
 }
 
-.correct-answer-cell {
-  background-color: #e0f7fa;
+.responses-table th[colspan='2'] {
+  text-align: center;
+  background-color: #e8f4f8;
 }
 
-.correct,
+.questions-table tr:nth-child(even),
+.responses-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.questions-table tr:hover,
+.responses-table tr:hover {
+  background-color: #f1f7fc;
+}
+
+.correct {
+  color: green;
+}
+
 .incorrect {
-  position: relative;
-  white-space: normal;
-}
-
-.correct:hover::after,
-.incorrect:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  background-color: #333;
-  color: #fff;
-  padding: 5px;
-  font-size: 12px;
-  border-radius: 4px;
-  width: auto;
-  max-width: 300px;
-  white-space: normal;
-  left: 0;
-  top: 100%; /* Display below the cell */
-  z-index: 10;
-}
-
-.detail-responses-table td {
-  height: auto;
-  max-height: 60px; /* Limiting the height of the row */
-}
-
-.detail-responses-table th,
-.detail-responses-table td {
-  max-width: 150px; /* Allow more words per line in each cell */
-  min-width: 150px; /* Minimum width to keep cells uniform */
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.detail-responses-table-wrapper {
-  max-width: 100%; /* Keep table within the viewport */
-  overflow-x: auto; /* Enable horizontal scrolling */
-  display: block;
-}
-
-.detail-responses-table th:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  background-color: #333;
-  color: #fff;
-  padding: 5px;
-  font-size: 12px;
-  border-radius: 4px;
-  width: auto;
-  max-width: 300px;
-  white-space: normal;
-  left: 0;
-  top: 100%;
-  z-index: 10;
-}
-
-.tooltip-text {
-  font-weight: normal; /* No bold text */
-  font-size: 12px;
-  color: #333;
+  color: red;
 }

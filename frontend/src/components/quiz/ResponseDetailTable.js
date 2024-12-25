@@ -1,87 +1,174 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './css/ResponsesDetailTable.css'; // Import the CSS
 
-const DetailTable = ({ responses, viewType, selectedQuizTitle }) => {
-  if (viewType === 'quiz') {
-    // Extract all unique questions from the first user's response to create the structure
-    const questions = responses[0]?.quizResponses.map((resp) => ({
-      questionText: resp.questionText,
-      correctAnswer: resp.correctAnswer,
-    }));
+const DetailTable = ({ responses, questions }) => {
+  useEffect(() => {}, [responses, questions]);
 
-    return (
-      <div>
-        <h3>Detailed Responses for Quiz: {selectedQuizTitle}</h3>
+  if (!responses || !questions) {
+    return <p>No valid data available to display</p>;
+  }
 
-        <div className="detail-responses-table-wrapper">
-          <table className="detail-responses-table">
+  // Helper function to map UUIDs to text
+  const mapOptionUUIDToText = (question, uuid, side = 'right') => {
+    const option =
+      side === 'right'
+        ? question.options.find(
+            (opt) => opt.right_option_uuid === uuid || opt.option_uuid === uuid
+          )
+        : question.options.find((opt) => opt.left_option_uuid === uuid);
+    return option
+      ? side === 'right'
+        ? option.right_option_text || option.option_text
+        : option.left_option_text
+      : 'Unknown';
+  };
+
+  // Render responses for each question type
+  const renderUserResponse = (question, userResponses, responseGrid) => {
+    if (question.question_type === 'match-pairs') {
+      return responseGrid
+        .filter((res) => res.question_id === question.id)
+        .map((res, index) => (
+          <div
+            key={index}
+            style={{
+              color: res.is_correct ? 'green' : 'red',
+            }}
+          >
+            {mapOptionUUIDToText(question, res.left_option_uuid, 'left')} →{' '}
+            {mapOptionUUIDToText(question, res.right_option_uuid, 'right')}{' '}
+            {res.is_correct ? '✅' : '❌'}
+          </div>
+        ));
+    }
+
+    if (question.question_type === 'correct-order') {
+      return responseGrid
+        .filter((res) => res.question_id === question.id)
+        .map((res, index) => (
+          <div
+            key={index}
+            style={{
+              color: res.is_correct ? 'green' : 'red',
+            }}
+          >
+            {mapOptionUUIDToText(question, res.right_option_uuid)}{' '}
+            {res.is_correct ? '✅' : '❌'}
+          </div>
+        ));
+    }
+
+    // Default case for text, MCQ, and true/false
+    return userResponses.map((res, index) => (
+      <div
+        key={index}
+        style={{
+          color: res.is_correct ? 'green' : 'red',
+        }}
+      >
+        {question.question_type === 'text'
+          ? res.response_text
+          : mapOptionUUIDToText(question, res.option_uuid)}
+        {res.is_correct ? ' ✅' : ' ❌'}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="detail-table-container">
+      {/* Questions Table */}
+      <h3>Questions</h3>
+      <table className="questions-table">
+        <thead>
+          <tr>
+            <th>Question No.</th>
+            <th>Question Text</th>
+            <th>Type of Question</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          {questions.map((question, questionIndex) => (
+            <tr key={question.id}>
+              <td>{questionIndex + 1}</td>
+              <td>{question.question_text}</td>
+              <td>{question.question_type.replace('-', ' ')}</td>
+              <td>
+                {question.question_type === 'match-pairs'
+                  ? question.options.map((opt, index) => (
+                      <div key={index}>
+                        {opt.left_option_text} → {opt.right_option_text}
+                      </div>
+                    ))
+                  : question.question_type === 'correct-order'
+                  ? question.options
+                      .sort((a, b) => a.left_option_text - b.left_option_text)
+                      .map((opt, index) => (
+                        <div key={index}>{opt.right_option_text}</div>
+                      ))
+                  : question.options.map((opt) => (
+                      <div
+                        key={opt.id}
+                        style={{
+                          color: opt.isCorrect ? 'green' : 'black',
+                        }}
+                      >
+                        {opt.option_text}
+                        {opt.isCorrect && ' ✅'}
+                      </div>
+                    ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Responses Table */}
+      <h3>User Responses</h3>
+      {responses.map((response, responseIndex) => (
+        <div
+          key={`${response.user.id}-${responseIndex}`}
+          className="response-container"
+        >
+          <table className="responses-table">
             <thead>
               <tr>
-                <th>User</th>
-                {questions &&
-                  questions.slice(0, 6).map(
-                    (
-                      question,
-                      idx // Limit to show 6 questions initially
-                    ) => (
-                      <th
-                        key={idx}
-                        data-tooltip={question.questionText} // Tooltip with full question
-                      >
-                        {question.questionText.substring(0, 30)}...{' '}
-                        {/* Show first 30 characters */}
-                      </th>
-                    )
-                  )}
+                <th colSpan={2}>
+                  {response.user.username} | Score: {response.attempt.score} |
+                  Percentage: {response.attempt.percentage}%
+                </th>
+              </tr>
+              <tr>
+                <th>Question No.</th>
+                <th>User's Response</th>
               </tr>
             </thead>
             <tbody>
-              {/* Correct Answer Row */}
-              <tr>
-                <td className="correct-answer-row">Correct Answer</td>
-                {questions &&
-                  questions.slice(0, 6).map(
-                    (
-                      question,
-                      idx // Limit to show 6 questions initially
-                    ) => (
-                      <td key={idx} className="correct-answer-cell">
-                        {question.correctAnswer}
-                      </td>
-                    )
-                  )}
-              </tr>
+              {questions.map((question, questionIndex) => {
+                const userResponses = response.responses.filter(
+                  (res) => res.question_id === question.id
+                );
+                const responseGrid = response.responses_grid.filter(
+                  (res) => res.question_id === question.id
+                );
 
-              {/* User Responses Rows */}
-              {responses.map((response, idx) => (
-                <tr key={idx}>
-                  <td>{response.username}</td>
-                  {response.quizResponses.slice(0, 6).map(
-                    (
-                      resp,
-                      i // Limit to show 6 questions initially
-                    ) => (
-                      <td
-                        key={i}
-                        className={resp.isCorrect ? 'correct' : 'incorrect'}
-                        data-tooltip={resp.userResponse}
-                      >
-                        {resp.userResponse}
-                      </td>
-                    )
-                  )}
-                </tr>
-              ))}
+                return (
+                  <tr key={question.id}>
+                    <td>{questionIndex + 1}</td>
+                    <td>
+                      {renderUserResponse(
+                        question,
+                        userResponses,
+                        responseGrid
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h4>No responses available</h4>
+      ))}
     </div>
   );
 };

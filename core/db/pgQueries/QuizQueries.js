@@ -107,7 +107,7 @@ class QuizQueries extends Query {
    * @param {Number} quizId - The ID of the quiz
    * @returns {Array} - The list of questions
    */
-  async findQuestionsByQuizId(quizId) {
+  async findQuestionsByQuizId(quizId, fetchCorrectAns = false) {
     try {
       const result = await db.query(
         `
@@ -120,6 +120,7 @@ class QuizQueries extends Query {
           o.id AS option_id,
           o.option_text,
           o.option_uuid,
+          o.is_correct,
           og.left_option_text,
           og.left_option_uuid,
           og.right_option_text,
@@ -158,6 +159,7 @@ class QuizQueries extends Query {
             id: row.option_id,
             option_text: row.option_text,
             option_uuid: row.option_uuid,
+            isCorrect: fetchCorrectAns ? row.is_correct : undefined,
           });
         }
 
@@ -186,10 +188,6 @@ class QuizQueries extends Query {
    */
   async getLastAttemptByUser(quizId, userId) {
     try {
-      console.log(
-        `Fetching last attempt for quizId: ${quizId}, userId: ${userId}`
-      );
-
       const result = await db.query(
         `
       WITH latest_attempt AS (
@@ -239,8 +237,6 @@ GROUP BY
         [quizId, userId]
       );
 
-      console.log('Fetched user responses:', result.rows);
-
       if (result.rowCount === 0) {
         console.log(
           `No attempt found for quizId: ${quizId}, userId: ${userId}`
@@ -262,7 +258,7 @@ GROUP BY
    */
   async deleteQuestionById(quizId, questionId) {
     await db.query(`DELETE FROM options WHERE question_id = $1`, [questionId]);
-    console.log(questionId);
+
     const result = await db.query(
       `DELETE FROM questions WHERE id = $1 and quiz_id = $2 RETURNING *`,
       [questionId, quizId]
@@ -464,7 +460,7 @@ GROUP BY
       }
     }
 
-    // Additional validation: ensure no correct options were missed
+    // Additional validation: ensure no correct options were missed not additional were marked..
     const { rows: correctOptions } = await client.query(
       `SELECT COUNT(*) AS correct_count FROM options WHERE question_id = $1 AND is_correct = true`,
       [questionId]
@@ -510,8 +506,6 @@ GROUP BY
   }
 
   async processOptionPairs(client, quizAttemptId, questionId, answer) {
-    console.log(`Processing pair validation for question ID: ${questionId}`);
-
     // Step 1: Fetch correct pairs from the database
     const correctPairs = await client.query(
       `SELECT left_option_uuid, right_option_uuid 
@@ -534,10 +528,7 @@ GROUP BY
     let isQuestionCorrect = true;
 
     for (const userPair of answer.optionPairs) {
-      console.log(userPair);
       const { leftUUID, rightUUID } = userPair;
-
-      console.log('UUID : ', leftUUID, rightUUID);
       // Skip unanswered pairs
       if (!rightUUID || rightUUID.trim() === '') {
         console.warn(
@@ -560,10 +551,6 @@ GROUP BY
          VALUES ($1, $2, $3, $4, $5)`,
         [quizAttemptId, questionId, leftUUID, rightUUID, isCorrect]
       );
-
-      console.log(
-        `Processed pair: leftUUID=${leftUUID}, rightUUID=${rightUUID}, isCorrect=${isCorrect}`
-      );
     }
 
     console.log(
@@ -578,9 +565,6 @@ GROUP BY
       const queryResponses = `SELECT * FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2)`;
       const attemptsResult = await db.query(queryAttempts, [userId, quizId]);
       const responsesResult = await db.query(queryResponses, [userId, quizId]);
-
-      console.log('Quiz Attempts:', attemptsResult.rows);
-      console.log('Responses:', responsesResult.rows);
     } catch (error) {
       console.error('Error checking data consistency:', error);
     }
@@ -678,7 +662,6 @@ ORDER BY
         console.warn(`No responses found for attempt ID: ${attemptId}`);
         return [];
       }
-      console.log(result.rows);
       return result.rows;
     } catch (error) {
       console.error('Error in getResponsesForAttempt:', error.message);
@@ -889,7 +872,7 @@ WHERE q.is_active = TRUE
   AND ($2::boolean OR COALESCE(uaq.archived, FALSE) IS NOT TRUE);`;
 
     const result = await db.query(query, [userId, includeArchived]);
-    console.log(result.rows);
+
     return result.rows;
   }
 
@@ -911,7 +894,6 @@ WHERE q.is_active = TRUE
         `UPDATE quizzes SET title = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
         [title, description, quizId]
       );
-      console.log('Quiz updated in database:', result.rows[0]);
       return result.rows[0];
     } catch (error) {
       console.error('Error updating quiz in database:', error);
@@ -1060,38 +1042,103 @@ WHERE q.is_active = TRUE
     }
   }
 
-  // Get detailed responses for a quiz
+  /**
+   * Get detailed quiz responses for a quiz.
+   * @param:  quizID
+   */
+
   async getDetailedQuizResponses(quizId) {
-    const query = `
-    SELECT 
-      q.question_text, 
-      r.response_text AS user_response, 
-      r.is_correct, 
-      o.option_text AS correct_answer, 
-      u.username
-    FROM 
-      responses r
-    INNER JOIN 
-      quiz_attempts a ON r.attempt_id = a.id
-    INNER JOIN 
-      questions q ON r.question_id = q.id
-    INNER JOIN 
-      options o ON q.id = o.question_id AND o.is_correct = true
-    INNER JOIN 
-      users u ON a.user_id = u.id
-    WHERE 
-      a.quiz_id = $1
-    AND 
-      a.attempt_date = (
-        SELECT MAX(attempt_date)
-        FROM quiz_attempts
-        WHERE quiz_id = $1
-        AND user_id = a.user_id
-      )
-  `;
-    const result = await db.query(query, [quizId]);
-    console.log('Quiz Responses Fetched:', result.rows); // Debug log
-    return result.rows;
+    try {
+      console.log(`Queries Fetching detailed responses for quizId: ${quizId}`);
+
+      // Fetch latest attempts for the given quizId
+      const attemptsQuery = `
+            SELECT DISTINCT ON (qa.user_id) qa.id AS attempt_id, qa.user_id, qa.score, qa.percentage, qa.attempt_date
+            FROM quiz_attempts qa
+            WHERE qa.quiz_id = $1
+            ORDER BY qa.user_id, qa.attempt_date DESC;
+        `;
+      const attemptsResult = await db.query(attemptsQuery, [quizId]);
+      const attempts = attemptsResult.rows;
+
+      if (attempts.length === 0) {
+        console.warn(`No attempts found for quizId: ${quizId}`);
+        return [];
+      }
+
+      // Create a set of latest attempt IDs
+      const latestAttemptIds = attempts.map((attempt) => attempt.attempt_id);
+
+      // Fetch responses from the responses table for latest attempts
+      const responsesQuery = `
+            SELECT r.*, qa.user_id
+            FROM responses r
+            JOIN quiz_attempts qa ON r.attempt_id = qa.id
+            WHERE qa.id = ANY($1);
+        `;
+      const responsesResult = await db.query(responsesQuery, [
+        latestAttemptIds,
+      ]);
+      const responses = responsesResult.rows;
+
+      // Fetch responses from the responses_grid table for latest attempts
+      const responsesGridQuery = `
+            SELECT rg.*, qa.user_id
+            FROM responses_grid rg
+            JOIN quiz_attempts qa ON rg.attempt_id = qa.id
+            WHERE qa.id = ANY($1);
+        `;
+      const responsesGridResult = await db.query(responsesGridQuery, [
+        latestAttemptIds,
+      ]);
+      const responsesGrid = responsesGridResult.rows;
+
+      // Fetch user details
+      const userIds = attempts.map((attempt) => attempt.user_id);
+      const usersQuery = `
+            SELECT u.id, u.username, u.email
+            FROM users u
+            WHERE u.id = ANY($1) ;
+        `;
+      const usersResult = await db.query(usersQuery, [userIds]);
+      const users = usersResult.rows;
+
+      // Combine data
+      const data = users.map((user) => {
+        const userAttempt = attempts.find(
+          (attempt) => attempt.user_id === user.id
+        );
+
+        const userResponses = responses.filter(
+          (response) => response.user_id === user.id
+        );
+        const userGridResponses = responsesGrid.filter(
+          (grid) => grid.user_id === user.id
+        );
+
+        return {
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+          },
+          attempt: userAttempt
+            ? {
+                attempt_id: userAttempt.attempt_id,
+                score: userAttempt.score,
+                percentage: userAttempt.percentage,
+                attempt_date: userAttempt.attempt_date,
+              }
+            : null,
+          responses: userResponses,
+          responses_grid: userGridResponses,
+        };
+      });
+      return data; // Return the constructed data
+    } catch (error) {
+      console.error('Queries: Error fetching detailed quiz responses:', error);
+      throw error;
+    }
   }
 
   // Get detailed responses for a user
@@ -1124,7 +1171,6 @@ WHERE q.is_active = TRUE
       )
   `;
     const result = await db.query(query, [userId]);
-    console.log('User Responses Fetched:', result.rows); // Debug log
     return result.rows;
   }
 
@@ -1134,9 +1180,7 @@ WHERE q.is_active = TRUE
 FROM quizzes q
 LEFT JOIN quiz_attempts qa ON q.id = qa.quiz_id AND qa.user_id = $1
 WHERE q.is_active = true AND qa.id IS NULL`;
-    console.log(userId, includeArchived);
     const result = await db.query(query, [userId]);
-    console.log(result.rows);
     return result.rows;
   }
 
