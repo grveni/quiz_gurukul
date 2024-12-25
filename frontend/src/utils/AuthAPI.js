@@ -18,10 +18,9 @@ export const login = async (email, password) => {
     const decodedToken = jwtDecode(token);
     return decodedToken.role;
   } catch (error) {
-    console.log(error.response.data);
     // Send proper error message from server response if available
-    if (error.response && error.response.data && error.response.data.error) {
-      throw new Error(error.response.data.error);
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
     } else {
       throw new Error('Aut: Login failed');
     }
