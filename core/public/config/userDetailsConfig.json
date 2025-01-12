@@ -67,7 +67,7 @@
         "type": "text",
         "placeholder": "Flat No.",
         "validations": {
-          "required": true,
+          "required": false,
           "minLength": 1,
           "maxLength": 50
         }
@@ -93,7 +93,7 @@
           "9_Palm"
         ],
         "validations": {
-          "required": true
+          "required": false
         }
       }
     },
@@ -106,7 +106,7 @@
         "type": "text",
         "placeholder": "Father's Name",
         "validations": {
-          "required": true,
+          "required": false,
           "minLength": 3,
           "maxLength": 255
         }
@@ -121,7 +121,7 @@
         "type": "text",
         "placeholder": "Mother's Name",
         "validations": {
-          "required": true,
+          "required": false,
           "minLength": 3,
           "maxLength": 255
         }
@@ -136,7 +136,7 @@
         "type": "text",
         "placeholder": "Class",
         "validations": {
-          "required": true,
+          "required": false,
           "pattern": "^[1-9][0-9]*$"
         }
       }

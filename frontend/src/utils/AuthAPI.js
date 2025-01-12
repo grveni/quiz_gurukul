@@ -73,10 +73,9 @@ export const registerUser = async (formData) => {
 
     return response.data;
   } catch (error) {
-    console.log(error.response.data);
     // Send proper error message from server response if available
-    if (error.response && error.response.data && error.response.data.error) {
-      throw new Error(error.response.data.error);
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to register user');
     }

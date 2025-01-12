@@ -15,21 +15,24 @@ class AuthController extends Controller {
     this.config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
   }
 
-  getFieldValidation(req, fieldConfig, fieldName) {
+  getFieldValidation(reqBody, fieldConfig, fieldName) {
     const errors = [];
-    const validations = fieldConfig.form.validations;
-    const value = req.body[fieldName];
+    const validations = fieldConfig.validations;
+
+    const value = reqBody[fieldName];
     if (validations.required && !value) {
-      errors.push(`${fieldConfig.name} is required`);
+      errors.push(`${fieldConfig.placeholder} is required`);
+    } else if (!value || !value.length) {
+      return errors;
     }
     if (validations.minLength && value.length < validations.minLength) {
       errors.push(
-        `${fieldConfig.name} must be at least ${validations.minLength} characters long`
+        `${fieldConfig.placeholder} must be at least ${validations.minLength} characters long`
       );
     }
     if (validations.maxLength && value.length > validations.maxLength) {
       errors.push(
-        `${fieldConfig.name} must be no more than ${validations.maxLength} characters long`
+        `${fieldConfig.placeholder} must be no more than ${validations.maxLength} characters long`
       );
     }
     if (validations.pattern && !new RegExp(validations.pattern).test(value)) {
@@ -51,10 +54,13 @@ class AuthController extends Controller {
       // Validate input fields using the JSON config
       const fieldNames = Object.keys(this.config.fields);
       const validationErrors = [];
-
       for (const fieldName of fieldNames) {
         const fieldConfig = this.config.fields[fieldName];
-        const errors = this.getFieldValidation(req, fieldConfig, fieldName);
+        const errors = this.getFieldValidation(
+          req.body,
+          fieldConfig.form,
+          fieldName
+        );
         validationErrors.push(...errors);
       }
 
@@ -103,7 +109,7 @@ class AuthController extends Controller {
       await body('email')
         .isEmail()
         .withMessage('Invalid email address')
-        .normalizeEmail()
+        .trim()
         .run(req);
       await body('password')
         .notEmpty()
@@ -126,7 +132,7 @@ class AuthController extends Controller {
         console.log('user not found');
         return res.status(404).json({ message: 'User not found' });
       }
-      console.log(user);
+
       //Add logic to check status if disabled, send proper message
       if (!user.status) {
         return res.status(403).json({
@@ -146,8 +152,6 @@ class AuthController extends Controller {
       if (!roleName) {
         return res.status(500).json({ message: 'Role not found' });
       }
-
-      console.log(user.id, roleName);
       // Generate JWT
       const token = jwt.sign(
         { id: user.id, role: roleName.toLowerCase() },

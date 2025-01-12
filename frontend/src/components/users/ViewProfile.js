@@ -186,7 +186,7 @@ const ViewProfile = () => {
 
   return (
     <div className="form-container">
-      <h1>View Profile</h1>
+      <h1>Profile</h1>
 
       {/* Toggle Password Change Form */}
       <a
