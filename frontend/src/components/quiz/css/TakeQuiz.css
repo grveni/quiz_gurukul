@@ -112,3 +112,9 @@ button[type='submit'] {
   color: red;
   margin-top: 10px;
 }
+
+.quiz-description {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 20px;
+}

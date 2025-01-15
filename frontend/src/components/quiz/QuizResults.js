@@ -4,6 +4,7 @@ import { getQuizResults, getCorrectAnswers } from '../../utils/QuizAPI';
 import './css/QuizResults.css';
 
 const QuizResults = () => {
+  const [quiz, setQuiz] = useState(null);
   const { quizId } = useParams();
   const [results, setResults] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
@@ -15,6 +16,9 @@ const QuizResults = () => {
       try {
         const response = await getQuizResults(quizId);
         console.log('Fetched Quiz Results:', response); // Debug log
+        if (response && response.quiz) {
+          setQuiz(response.quiz);
+        }
         setResults(response);
       } catch (err) {
         console.error('Error fetching quiz results:', err);
@@ -197,6 +201,10 @@ const QuizResults = () => {
   return (
     <div className="quiz-results">
       <h2>Quiz Results</h2>
+      <h4>{quiz.title}</h4>
+      {quiz.description && (
+        <p className="quiz-description">{quiz.description}</p>
+      )}
       <p>Score: {results.score}</p>
       <p>Percentage: {results.percentage}%</p>
 

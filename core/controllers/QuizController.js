@@ -648,7 +648,7 @@ class QuizController extends Controller {
     try {
       const { quizId } = req.params;
       const userId = req.user.id;
-
+      const quiz = await Quiz.getQuizById(quizId);
       const quizResults = await Quiz.getQuizResultsForUser(userId, quizId);
 
       if (!quizResults) {
@@ -659,6 +659,7 @@ class QuizController extends Controller {
       }
 
       res.status(200).json({
+        quiz: quiz,
         results: quizResults.results,
         score: quizResults.score,
         percentage: quizResults.percentage,

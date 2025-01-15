@@ -195,6 +195,9 @@ const TakeQuiz = () => {
   return (
     <div className="take-quiz">
       <h4>{quiz.title}</h4>
+      {quiz.description && (
+        <p className="quiz-description">{quiz.description}</p>
+      )}
       <form onSubmit={handleSubmit}>
         {quiz.questions.map((question, index) => (
           <div key={question.id} className="question-block">
