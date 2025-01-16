@@ -99,29 +99,35 @@ class UserController extends Controller {
 
       // Check the role of the logged-in user
       const role = await User.findUserRoleName(loggedInUserId);
-
+      let currentPassword;
+      let newPassword;
       let userId;
+      console.log(role);
+      console.log(req.params);
       if (role === 'Admin' && req.params.id) {
         // If admin and params.id is provided, fetch the specified user's profile
         userId = req.params.id;
+        currentPassword = '';
+        newPassword = req.body.newPassword;
       } else {
         // For non-admins or if no params.id is provided, use the logged-in user's ID
         userId = loggedInUserId;
-      }
-      const { currentPassword, newPassword } = req.body;
+        currentPassword = req.body.currentPassword;
+        newPassword = req.body.newPassword;
 
-      if (!currentPassword || !newPassword) {
-        return res
-          .status(400)
-          .json({ error: 'Both current and new passwords are required' });
+        if (!currentPassword || !newPassword) {
+          return res
+            .status(400)
+            .json({ error: 'Both current and new passwords are required' });
+        }
       }
 
       const result = await User.changePassword(
+        role,
         userId,
         currentPassword,
         newPassword
       );
-
       if (result.error) {
         return res.status(400).json({ error: result.error });
       }

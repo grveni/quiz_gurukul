@@ -6,6 +6,7 @@ import {
   changeUserPassword,
 } from '../../utils/UserAPI';
 import { fetchConfig } from '../../utils/AuthAPI';
+import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 
 const ViewProfile = () => {
@@ -23,6 +24,7 @@ const ViewProfile = () => {
   const [editMode, setEditMode] = useState(true); // Profile edit mode
 
   const navigate = useNavigate();
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     async function fetchInitialData() {
@@ -32,6 +34,8 @@ const ViewProfile = () => {
           navigate('/login');
           return;
         }
+        const decodedToken = jwtDecode(token);
+        setRole(decodedToken.role);
 
         // Fetch config for user fields
         const config = await fetchConfig(token);
@@ -97,7 +101,7 @@ const ViewProfile = () => {
     setPasswordError(''); // Clear existing errors
 
     // Validate password inputs
-    if (!passwordData.currentPassword) {
+    if (role !== 'admin' && !passwordData.currentPassword) {
       console.log('Validation failed: Current password is required');
       setPasswordError('Current password is required');
       return;
@@ -125,7 +129,9 @@ const ViewProfile = () => {
       // API call to change password
       const result = await changeUserPassword(
         {
-          currentPassword: passwordData.currentPassword,
+          ...(role !== 'admin' && {
+            currentPassword: passwordData.currentPassword,
+          }),
           newPassword: passwordData.newPassword,
         },
         userId
@@ -212,16 +218,18 @@ const ViewProfile = () => {
           }}
         >
           <h3>Change Password</h3>
-          <div className="form-field">
-            <input
-              type="password"
-              name="currentPassword"
-              placeholder="Current Password"
-              value={passwordData.currentPassword}
-              onChange={handlePasswordChange}
-              required
-            />
-          </div>
+          {role !== 'admin' && (
+            <div className="form-field">
+              <input
+                type="password"
+                name="currentPassword"
+                placeholder="Current Password"
+                value={passwordData.currentPassword}
+                onChange={handlePasswordChange}
+                required
+              />
+            </div>
+          )}
           <div className="form-field">
             <input
               type="password"

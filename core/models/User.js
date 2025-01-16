@@ -77,22 +77,23 @@ class User extends Model {
       throw err;
     }
   }
-  async changePassword(userId, currentPassword, newPassword) {
+  async changePassword(role, userId, currentPassword, newPassword) {
     try {
       const user = await this.queryClass.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }
-
-      const isMatch = await this.queryClass.comparePassword(
-        currentPassword,
-        user.password
-      );
-      if (!isMatch) {
-        return { error: 'Current password is incorrect' };
+      if (role !== 'Admin') {
+        const isMatch = await this.queryClass.comparePassword(
+          currentPassword,
+          user.password
+        );
+        if (!isMatch) {
+          return { error: 'Current password is incorrect' };
+        }
       }
-
       const hashedPassword = await this.queryClass.hashPassword(newPassword);
+
       const updated = await this.queryClass.updatePassword(
         userId,
         hashedPassword
@@ -101,7 +102,6 @@ class User extends Model {
       if (!updated) {
         throw new Error('Failed to update password');
       }
-
       return { success: true };
     } catch (error) {
       console.error('Error in User.changePassword:', error.message);
